@@ -25,6 +25,7 @@ interface SimpleHistoricalChartProps {
 export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M" }: SimpleHistoricalChartProps) {
   const [viewRange, setViewRange] = useState({ start: 0, end: 250 }); // Show first 250 candles by default
   const [zoomLevel, setZoomLevel] = useState(250); // Number of candles to show
+  const [currentZoomStart, setCurrentZoomStart] = useState(0); // Track current zoom position
   
   // Fetch initial 1 year of data
   const { data: historicalData = [], isLoading } = useQuery({
@@ -72,20 +73,31 @@ export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M"
     setViewRange({ start: 0, end: Math.min(250, historicalData.length) });
   };
 
+  const handleZoomChange = (startIndex: number, endIndex: number) => {
+    setCurrentZoomStart(startIndex);
+    const newZoomLevel = endIndex - startIndex;
+    setZoomLevel(newZoomLevel);
+    setViewRange({ start: startIndex, end: endIndex });
+  };
+
   const handlePanLeft = () => {
-    const step = Math.floor(zoomLevel * 0.2);
-    setViewRange(prev => ({
-      start: Math.max(0, prev.start - step),
-      end: Math.max(step, prev.end - step)
-    }));
+    const step = Math.floor(zoomLevel * 0.2); // Move by 20% of current zoom
+    const newStart = Math.max(0, viewRange.start - step);
+    setViewRange({
+      start: newStart,
+      end: Math.min(newStart + zoomLevel, historicalData.length)
+    });
+    setCurrentZoomStart(newStart);
   };
 
   const handlePanRight = () => {
-    const step = Math.floor(zoomLevel * 0.2);
-    setViewRange(prev => ({
-      start: Math.min(historicalData.length - zoomLevel, prev.start + step),
-      end: Math.min(historicalData.length, prev.end + step)
-    }));
+    const step = Math.floor(zoomLevel * 0.2); // Move by 20% of current zoom
+    const newStart = Math.min(historicalData.length - zoomLevel, viewRange.start + step);
+    setViewRange({
+      start: newStart,
+      end: Math.min(newStart + zoomLevel, historicalData.length)
+    });
+    setCurrentZoomStart(newStart);
   };
 
   // Get data for current view
@@ -154,6 +166,7 @@ export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M"
           data={viewData}
           symbol={symbol}
           height="450px"
+          onZoomChange={handleZoomChange}
         />
         
         {/* Market Session Legend */}

@@ -17,12 +17,14 @@ interface WorkingCandlestickChartProps {
   data: CandleData[];
   symbol: string;
   height?: string;
+  onZoomChange?: (start: number, end: number) => void;
 }
 
 export default function WorkingCandlestickChart({ 
   data, 
   symbol, 
-  height = "400px" 
+  height = "400px",
+  onZoomChange
 }: WorkingCandlestickChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
@@ -364,6 +366,19 @@ export default function WorkingCandlestickChart({
 
     chartInstance.current.setOption(option);
 
+    // Handle dataZoom events for infinite scrolling
+    if (onZoomChange) {
+      chartInstance.current.off('dataZoom');
+      chartInstance.current.on('dataZoom', (params: any) => {
+        if (params.batch && params.batch[0]) {
+          const { start, end } = params.batch[0];
+          const startIndex = Math.floor((start / 100) * data.length);
+          const endIndex = Math.floor((end / 100) * data.length);
+          onZoomChange(startIndex, endIndex);
+        }
+      });
+    }
+
     // Handle resize
     const handleResize = () => {
       if (chartInstance.current) {
@@ -375,6 +390,9 @@ export default function WorkingCandlestickChart({
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      if (chartInstance.current && onZoomChange) {
+        chartInstance.current.off('dataZoom');
+      }
     };
 
   }, [data, symbol]);
