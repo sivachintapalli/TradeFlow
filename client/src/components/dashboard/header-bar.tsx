@@ -9,6 +9,23 @@ interface HeaderBarProps {
 
 export default function HeaderBar({ showEmergencyStop = false }: HeaderBarProps) {
   const { data: spyData, isLoading: spyLoading } = useMarketData("SPY");
+  
+  // Check if market is open based on data age and current time
+  const isMarketDataLive = () => {
+    if (!spyData?.lastUpdate) return false;
+    const lastUpdate = new Date(spyData.lastUpdate);
+    const now = new Date();
+    const diffMinutes = (now.getTime() - lastUpdate.getTime()) / (1000 * 60);
+    return diffMinutes < 2; // Consider live if updated within 2 minutes
+  };
+
+  const isDataStale = () => {
+    if (!spyData?.lastUpdate) return true;
+    const lastUpdate = new Date(spyData.lastUpdate);
+    const now = new Date();
+    const diffMinutes = (now.getTime() - lastUpdate.getTime()) / (1000 * 60);
+    return diffMinutes > 10; // Consider stale if older than 10 minutes
+  };
   const emergencyStop = useEmergencyStop();
   const { toast } = useToast();
 
@@ -82,8 +99,14 @@ export default function HeaderBar({ showEmergencyStop = false }: HeaderBarProps)
           {/* Connection Status */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-bullish rounded-full pulse-dot"></div>
-              <span className="text-sm text-gray-300">Market Data</span>
+              <div className={`w-2 h-2 rounded-full ${
+                spyLoading ? 'bg-yellow-500 animate-pulse' :
+                isDataStale() ? 'bg-red-500' :
+                isMarketDataLive() ? 'bg-green-bullish pulse-dot' : 'bg-orange-500'
+              }`}></div>
+              <span className="text-sm text-gray-300">
+                Market Data {isMarketDataLive() ? '(LIVE)' : isDataStale() ? '(STALE)' : '(RECENT)'}
+              </span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-green-bullish rounded-full pulse-dot"></div>

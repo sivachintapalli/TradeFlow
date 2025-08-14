@@ -32,6 +32,8 @@ export function useMarketData(symbol: string) {
   return useQuery<MarketData>({
     queryKey: ["/api/market-data", symbol],
     enabled: !!symbol,
+    refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
+    staleTime: 0, // Always consider data stale to trigger fresh fetches
   });
 }
 

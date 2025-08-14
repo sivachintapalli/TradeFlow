@@ -67,29 +67,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get stored market data
       let marketData = await storage.getMarketData(upperSymbol);
       
-      // Try to get real-time quote to update price
+      // Update market data with latest calculations (live if market open, recent close if closed)
       try {
-        const realTimeQuote = await polygonService.getRealTimeQuote(upperSymbol);
-        
-        if (realTimeQuote) {
-          // Update the stored data with real-time prices
-          const updatedData = {
-            id: marketData?.id || randomUUID(),
-            symbol: upperSymbol,
-            price: realTimeQuote.price.toString(),
-            change: realTimeQuote.change.toString(),
-            changePercent: realTimeQuote.changePercent.toString(),
-            volume: marketData?.volume || 0,
-            lastUpdate: new Date()
-          };
-          
-          // Save the updated data
-          await storage.updateMarketData(updatedData);
-          marketData = updatedData;
-        }
-      } catch (realTimeError: any) {
-        console.log(`Failed to get real-time quote for ${upperSymbol}:`, realTimeError?.message || 'Unknown error');
-        // Continue with stored data if real-time fails
+        await polygonService.updateMarketData(upperSymbol);
+        // Re-fetch the updated data
+        marketData = await storage.getMarketData(upperSymbol);
+      } catch (updateError: any) {
+        console.log(`Failed to update market data for ${upperSymbol}:`, updateError?.message || 'Unknown error');
+        // Continue with stored data if update fails
       }
       
       if (!marketData) {
@@ -251,11 +236,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       let progress = 0;
-      const sendProgress = (prog: number, message?: string, year?: number) => {
+      const sendProgress = (prog: number, year?: number) => {
         progress = prog;
         const data = JSON.stringify({ 
           progress: Math.round(prog), 
-          message: message || `Downloading ${timeframe} data...`,
+          message: `Downloading ${timeframe} data...`,
           year
         });
         res.write(`data: ${data}\n\n`);

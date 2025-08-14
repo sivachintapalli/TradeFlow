@@ -306,39 +306,150 @@ export class PolygonService {
 
 
   /**
-   * Update current market data for a symbol
+   * Update current market data for a symbol with live data when market is open
    */
   async updateMarketData(symbol: string): Promise<void> {
     try {
-      // Get the latest historical data point to use as current market data
-      const [latestData] = await db
-        .select()
-        .from(historicalData)
-        .where(eq(historicalData.symbol, symbol))
-        .orderBy(desc(historicalData.timestamp))
-        .limit(1);
+      let currentPrice: number;
+      let previousClose: number;
+      let volume: number = 0;
+      let isLive = false;
 
-      if (latestData) {
-        // Update or insert market data
-        await db.insert(marketData).values({
-          symbol,
-          price: latestData.close,
-          change: "0.00", 
-          changePercent: "0.00", 
-          volume: latestData.volume,
-        }).onConflictDoUpdate({
-          target: marketData.symbol,
-          set: {
-            price: latestData.close,
-            volume: latestData.volume,
-            change: "0.00",
-            changePercent: "0.00",
+      if (this.isMarketOpen()) {
+        // Market is open - try to get live quote from Polygon
+        try {
+          const quote = await this.fetchLiveQuote(symbol);
+          if (quote && quote.last && quote.last.price) {
+            currentPrice = quote.last.price;
+            volume = quote.last.size || 0;
+            isLive = true;
+            
+            // Get previous close for change calculation
+            const [prevData] = await db
+              .select()
+              .from(historicalData)
+              .where(and(
+                eq(historicalData.symbol, symbol),
+                eq(historicalData.timeframe, '1D')
+              ))
+              .orderBy(desc(historicalData.timestamp))
+              .limit(1);
+            
+            previousClose = prevData ? parseFloat(prevData.close.toString()) : currentPrice;
+          } else {
+            throw new Error('No live quote available');
           }
-        });
+        } catch (error) {
+          console.warn(`Live quote unavailable for ${symbol}, using latest historical data`);
+          // Fallback to latest historical data
+          const [latestData] = await db
+            .select()
+            .from(historicalData)
+            .where(eq(historicalData.symbol, symbol))
+            .orderBy(desc(historicalData.timestamp))
+            .limit(1);
+          
+          if (!latestData) return;
+          
+          currentPrice = parseFloat(latestData.close.toString());
+          previousClose = parseFloat(latestData.open.toString());
+          volume = latestData.volume;
+        }
+      } else {
+        // Market is closed - use most recent close
+        const [latestData] = await db
+          .select()
+          .from(historicalData)
+          .where(and(
+            eq(historicalData.symbol, symbol),
+            eq(historicalData.timeframe, '1D')
+          ))
+          .orderBy(desc(historicalData.timestamp))
+          .limit(1);
+        
+        if (!latestData) return;
+        
+        currentPrice = parseFloat(latestData.close.toString());
+        volume = latestData.volume;
+        
+        // Get previous day's close for change calculation
+        const prevData = await db
+          .select()
+          .from(historicalData)
+          .where(and(
+            eq(historicalData.symbol, symbol),
+            eq(historicalData.timeframe, '1D')
+          ))
+          .orderBy(desc(historicalData.timestamp))
+          .limit(2);
+        
+        previousClose = prevData && prevData.length > 1 ? parseFloat(prevData[1].close.toString()) : parseFloat(latestData.open.toString());
       }
+
+      // Calculate change and change percentage
+      const change = currentPrice - previousClose;
+      const changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0;
+
+      // Update or insert market data with calculated values
+      await db.insert(marketData).values({
+        symbol,
+        price: currentPrice.toFixed(2),
+        change: change.toFixed(2),
+        changePercent: changePercent.toFixed(2),
+        volume,
+      }).onConflictDoUpdate({
+        target: marketData.symbol,
+        set: {
+          price: currentPrice.toFixed(2),
+          change: change.toFixed(2),
+          changePercent: changePercent.toFixed(2),
+          volume,
+          lastUpdate: new Date()
+        }
+      });
+
+      console.log(`Updated ${symbol}: $${currentPrice.toFixed(2)} (${change >= 0 ? '+' : ''}${change.toFixed(2)}, ${changePercent.toFixed(2)}%) ${isLive ? '[LIVE]' : '[CLOSE]'}`);
+
     } catch (error) {
       console.error(`Error updating market data for ${symbol}:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Fetch live quote from Polygon API
+   */
+  async fetchLiveQuote(symbol: string): Promise<PolygonQuote | null> {
+    const url = `${this.baseUrl}/v2/last/trade/${symbol}?apikey=${this.apiKey}`;
+    
+    try {
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Polygon quote API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.status === 'OK' && data.results) {
+        return {
+          symbol,
+          last: {
+            price: data.results.p,
+            size: data.results.s,
+            exchange: data.results.x,
+            timeframe: 'REAL-TIME',
+            timestamp: data.results.t
+          },
+          market_status: 'open',
+          name: symbol
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`Error fetching live quote for ${symbol}:`, error);
+      return null;
     }
   }
   /**
