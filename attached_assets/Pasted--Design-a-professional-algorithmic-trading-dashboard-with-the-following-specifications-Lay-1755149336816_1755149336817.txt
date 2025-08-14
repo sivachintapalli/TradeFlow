@@ -1,0 +1,80 @@
+ ---
+  Design a professional algorithmic trading dashboard with the following specifications:
+
+  Layout & Structure:
+  - Create a dual-mode interface with two distinct tabs: "Historical Analysis" and "Real-Time Trading"
+  - Historical Analysis mode: Clean, TradingView-style interface focused on chart analysis only
+  - Real-Time Trading mode: Bloomberg Terminal-style interface with full trading panels (order entry, portfolio, risk metrics)
+  - Use a modern grid layout with glass morphism panels and cards
+
+  Visual Design:
+  - Modern 2025 design language with professional financial aesthetics
+  - Color scheme: Deep navy/charcoal backgrounds (#0f172a, #1e293b) with accent colors:
+    - Primary accent: Creative Purple (#844fc1)
+    - Success/bullish: Vibrant Growth (#38ce3c)
+    - Professional neutral: Mocha Mousse (#8d6e63)
+    - Error/bearish: Modern red (#ef4444)
+  - Typography: Inter for UI text, Roboto Mono for numerical data
+  - Glass morphism effects with backdrop blur, subtle borders, and depth
+
+  Key Components to Design:
+
+  1. Header Bar:
+    - Company logo/title on left
+    - Current market status (SPY price, change %)
+    - Connection status indicators
+    - Emergency stop button
+  2. Dual-Mode Tab Navigation:
+    - Professional tab switcher with smooth animations
+    - Active tab highlighting with gradient backgrounds
+    - Mode badges indicating current state
+  3. Historical Analysis Mode:
+    - Large chart area taking full width
+    - Top controls bar with: symbol input, period dropdown (1Y, 2Y, 5Y, 10Y), modern load data button
+    - Timeframe buttons (1m, 5m, 15m, 1h, 1d)
+    - Technical indicators panel on the side
+  4. Real-Time Trading Mode:
+    - Three-column layout:
+    - Left panel: Order entry form with buy/sell buttons, position sizing, risk controls
+    - Center: Live trading chart with real-time data feed
+    - Right panel: Order book, portfolio metrics, performance analytics
+  5. Modern Load Data Button:
+    - Gradient background with modern styling
+    - Loading states with progress animations
+    - Success/error state feedback
+    - Professional hover effects
+  6. Glass Morphism Panels:
+    - Semi-transparent backgrounds with backdrop blur
+    - Subtle borders and shadows
+    - Floating card design
+    - Professional depth hierarchy
+
+  Interactive Elements:
+  - Smooth hover animations on all buttons
+  - Progressive loading states
+  - Real-time data visualization
+  - Professional status indicators
+  - Keyboard shortcuts display
+
+  Style References:
+  - Bloomberg Terminal professional aesthetics
+  - TradingView modern chart interface
+  - Stripe Dashboard clean design
+  - Linear App modern UI patterns
+  - 2025 glassmorphism trends
+
+  Technical Specifications:
+  - Desktop-first design (1920x1080 primary)
+  - Responsive breakpoints for tablet/mobile
+  - Dark theme optimized for trading environments
+  - High contrast for numerical data readability
+  - Professional color psychology for financial applications
+
+  Specific Design Goals:
+  - Institutional-grade visual quality
+  - Clear separation between analysis and trading modes
+  - Professional financial application standards
+  - Modern 2025 design trends
+  - User-friendly while maintaining sophistication
+
+  Please create a high-fidelity mockup showing both modes with realistic financial data, modern animations, and professional trading interface elements.
