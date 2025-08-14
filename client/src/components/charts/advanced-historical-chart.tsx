@@ -78,12 +78,12 @@ export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1
     enabled: !!currentSymbol,
   });
 
-  // Fetch historical data - only when not downloading and ticker has data
+  // Fetch ALL historical data - load complete dataset for infinite scrolling
   const { data: historicalData, isLoading: isLoadingData, refetch: refetchHistoricalData } = useQuery({
-    queryKey: ['/api/historical-data', currentSymbol],
+    queryKey: ['/api/historical-data', currentSymbol, timeframe],
     enabled: !!currentSymbol && !isDownloading && tickerStatus?.hasData,
     queryFn: async (): Promise<HistoricalDataPoint[]> => {
-      const response = await fetch(`/api/historical-data/${currentSymbol}?timeframe=${timeframe}&limit=500`);
+      const response = await fetch(`/api/historical-data/${currentSymbol}?timeframe=${timeframe}&limit=100000`);
       if (!response.ok) throw new Error('Failed to fetch historical data');
       return response.json();
     },
@@ -300,9 +300,7 @@ export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1
             <div>Price Range: ${Math.min(...historicalData.map(d => parseFloat(d.low))).toFixed(2)} - ${Math.max(...historicalData.map(d => parseFloat(d.high))).toFixed(2)}</div>
           </div>
         </div>
-        <div className="text-xs text-gray-500">
-          Data Source: Polygon.io Real-Time Market Data • Sprint 2.6 Implementation
-        </div>
+
         
         {/* ECharts Candlestick Chart */}
         <CandlestickChart 

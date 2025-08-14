@@ -2,6 +2,115 @@ import { useEffect, useRef } from "react";
 import * as echarts from "echarts";
 import type { HistoricalData } from "@shared/schema";
 
+// Generate market session dividers and background areas
+function generateMarketSessions(data: HistoricalData[]) {
+  const dayDividers: any[] = [];
+  const sessionAreas: any[] = [];
+  
+  if (!data || data.length === 0) {
+    return { dayDividers, sessionAreas };
+  }
+  
+  // Group data by trading day
+  const dayGroups: { [key: string]: HistoricalData[] } = {};
+  
+  data.forEach(item => {
+    const date = new Date(item.timestamp);
+    const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    if (!dayGroups[dayKey]) {
+      dayGroups[dayKey] = [];
+    }
+    dayGroups[dayKey].push(item);
+  });
+  
+  // Create day dividers and session areas
+  Object.keys(dayGroups).forEach(dayKey => {
+    const dayData = dayGroups[dayKey];
+    if (dayData.length === 0) return;
+    
+    // Sort by timestamp
+    dayData.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    
+    const firstTimestamp = new Date(dayData[0].timestamp);
+    const lastTimestamp = new Date(dayData[dayData.length - 1].timestamp);
+    
+    // Day divider (vertical line at market open)
+    const marketOpen = new Date(firstTimestamp);
+    marketOpen.setHours(9, 30, 0, 0); // 9:30 AM EST
+    
+    if (marketOpen.getTime() >= firstTimestamp.getTime() && marketOpen.getTime() <= lastTimestamp.getTime()) {
+      dayDividers.push({
+        xAxis: marketOpen.getTime(),
+        lineStyle: {
+          color: '#64748b',
+          type: 'solid',
+          width: 1,
+          opacity: 0.8
+        },
+        label: {
+          show: false
+        }
+      });
+    }
+    
+    // Session background areas
+    const preMarketStart = new Date(firstTimestamp);
+    preMarketStart.setHours(4, 0, 0, 0); // 4:00 AM EST
+    
+    const marketOpenTime = new Date(firstTimestamp);
+    marketOpenTime.setHours(9, 30, 0, 0); // 9:30 AM EST
+    
+    const marketCloseTime = new Date(firstTimestamp);
+    marketCloseTime.setHours(16, 0, 0, 0); // 4:00 PM EST
+    
+    const afterHoursEnd = new Date(firstTimestamp);
+    afterHoursEnd.setHours(20, 0, 0, 0); // 8:00 PM EST
+    
+    // Pre-market session (4:00 AM - 9:30 AM)
+    if (firstTimestamp.getTime() <= marketOpenTime.getTime()) {
+      sessionAreas.push([
+        {
+          xAxis: Math.max(preMarketStart.getTime(), firstTimestamp.getTime()),
+          itemStyle: {
+            color: 'rgba(59, 130, 246, 0.05)', // Blue tint for pre-market
+            borderWidth: 0
+          }
+        },
+        {
+          xAxis: Math.min(marketOpenTime.getTime(), lastTimestamp.getTime()),
+          itemStyle: {
+            color: 'rgba(59, 130, 246, 0.05)',
+            borderWidth: 0
+          }
+        }
+      ]);
+    }
+    
+    // After-hours session (4:00 PM - 8:00 PM)
+    if (lastTimestamp.getTime() >= marketCloseTime.getTime()) {
+      sessionAreas.push([
+        {
+          xAxis: Math.max(marketCloseTime.getTime(), firstTimestamp.getTime()),
+          itemStyle: {
+            color: 'rgba(168, 85, 247, 0.05)', // Purple tint for after-hours
+            borderWidth: 0
+          }
+        },
+        {
+          xAxis: Math.min(afterHoursEnd.getTime(), lastTimestamp.getTime()),
+          itemStyle: {
+            color: 'rgba(168, 85, 247, 0.05)',
+            borderWidth: 0
+          }
+        }
+      ]);
+    }
+  });
+  
+  return { dayDividers, sessionAreas };
+}
+
 interface CandlestickChartProps {
   data: HistoricalData[];
   symbol: string;
@@ -68,6 +177,9 @@ export default function CandlestickChart({
 
     console.log('[CandlestickChart] Processed arrays - Candles:', processedData.length, 'Volume:', volumeData.length);
 
+    // Generate market session dividers (pre-market, regular hours, after-hours)
+    const marketSessions = generateMarketSessions(data);
+    
     const option = {
       backgroundColor: 'transparent',
       animation: true,
@@ -138,6 +250,17 @@ export default function CandlestickChart({
             fontFamily: 'Inter, sans-serif',
             fontSize: 11,
           },
+          // Add market session vertical lines
+          markLine: {
+            silent: true,
+            lineStyle: {
+              color: '#475569',
+              type: 'solid',
+              width: 1,
+              opacity: 0.6
+            },
+            data: marketSessions.dayDividers
+          },
           splitLine: { 
             show: false 
           },
@@ -181,6 +304,11 @@ export default function CandlestickChart({
               color: '#334155',
               opacity: 0.5
             }
+          },
+          // Add session markers
+          markArea: {
+            silent: true,
+            data: marketSessions.sessionAreas
           }
         },
         {
@@ -221,7 +349,10 @@ export default function CandlestickChart({
           encode: {
             x: 0,  // timestamp (x-axis)
             y: [1, 2, 3, 4]  // [open, close, low, high] for candlestick
-          }
+          },
+          // Enable dataZoom for infinite scrolling
+          large: true,
+          largeThreshold: 1000
         },
         {
           name: 'Volume',
