@@ -67,7 +67,7 @@ export default function AdvancedHistoricalChart({ symbol = "SPY" }: AdvancedHist
     queryKey: ['/api/historical-data', currentSymbol],
     enabled: !!currentSymbol,
     queryFn: async (): Promise<HistoricalDataPoint[]> => {
-      const response = await fetch(`/api/historical-data/${currentSymbol}?timeframe=1M&limit=1000`);
+      const response = await fetch(`/api/historical-data/${currentSymbol}?timeframe=1M&limit=500`);
       if (!response.ok) throw new Error('Failed to fetch historical data');
       return response.json();
     },
@@ -250,7 +250,7 @@ export default function AdvancedHistoricalChart({ symbol = "SPY" }: AdvancedHist
         
         {/* ECharts Candlestick Chart */}
         <CandlestickChart 
-          data={historicalData}
+          data={historicalData || []}
           symbol={currentSymbol || 'Unknown'}
           isHistorical={true}
           className="h-96 w-full bg-navy-800 rounded-lg"

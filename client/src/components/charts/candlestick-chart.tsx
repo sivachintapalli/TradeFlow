@@ -19,7 +19,10 @@ export default function CandlestickChart({
   const chartInstance = useRef<echarts.ECharts | null>(null);
 
   useEffect(() => {
-    if (!chartRef.current || !data || data.length === 0) return;
+    if (!chartRef.current || !data || data.length === 0) {
+      console.log('CandlestickChart: Missing data or ref', { chartRef: !!chartRef.current, dataLength: data?.length });
+      return;
+    }
 
     // Initialize chart if not exists
     if (!chartInstance.current) {
@@ -28,14 +31,20 @@ export default function CandlestickChart({
 
     const chart = chartInstance.current;
 
+    console.log('CandlestickChart: Processing', data.length, 'data points for', symbol);
+
     // Process data for ECharts candlestick format: [timestamp, open, close, low, high]
-    const processedData = data.map((item) => [
-      new Date(item.timestamp).getTime(),
-      parseFloat(item.open),
-      parseFloat(item.close),
-      parseFloat(item.low),
-      parseFloat(item.high),
-    ]);
+    const processedData = data.map((item, index) => {
+      const result = [
+        new Date(item.timestamp).getTime(),
+        parseFloat(item.open),
+        parseFloat(item.close),
+        parseFloat(item.low),
+        parseFloat(item.high),
+      ];
+      if (index < 3) console.log('Processing data point:', item, '-> ', result);
+      return result;
+    });
 
     const dates = data.map(item => new Date(item.timestamp).toLocaleDateString());
 
