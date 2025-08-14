@@ -215,7 +215,7 @@ export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M"
             Current View Data ({viewData.length} candles):
           </h5>
           <div className="space-y-1 max-h-32 overflow-y-auto">
-            {recentData.slice(0, 5).map((candle, index) => {
+            {viewData.slice(0, 5).map((candle, index) => {
               const candleIndex = viewRange.start + index;
               return (
                 <div key={candle.id} className="flex justify-between text-xs">
