@@ -153,8 +153,28 @@ export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M"
         <WorkingCandlestickChart 
           data={viewData}
           symbol={symbol}
-          height="400px"
+          height="450px"
         />
+        
+        {/* Market Session Legend */}
+        <div className="flex items-center justify-center space-x-6 mt-2 text-xs">
+          <div className="flex items-center space-x-1">
+            <div className="w-3 h-3 bg-blue-500 bg-opacity-20 border border-blue-500 rounded"></div>
+            <span className="text-gray-400">Pre-Market (4:00-9:30 AM)</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <div className="w-3 h-3 bg-gray-600 border border-gray-500 rounded"></div>
+            <span className="text-gray-400">Regular Market (9:30 AM-4:00 PM)</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <div className="w-3 h-3 bg-purple-500 bg-opacity-20 border border-purple-500 rounded"></div>
+            <span className="text-gray-400">After-Hours (4:00-8:00 PM)</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <div className="w-3 h-px bg-gray-500"></div>
+            <span className="text-gray-400">Day Dividers</span>
+          </div>
+        </div>
       </div>
 
       {/* Data Summary */}

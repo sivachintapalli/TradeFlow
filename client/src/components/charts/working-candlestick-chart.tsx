@@ -57,6 +57,112 @@ export default function WorkingCandlestickChart({
 
     const volumeData = sortedData.map(item => item.volume);
 
+    // Generate market session areas and day dividers
+    const generateMarketSessions = () => {
+      const markAreas: any[] = [];
+      const markLines: any[] = [];
+      const processedDays = new Set();
+
+      sortedData.forEach((item, index) => {
+        const timestamp = new Date(item.timestamp);
+        const hour = timestamp.getHours();
+        const minute = timestamp.getMinutes();
+        const dayKey = timestamp.toDateString();
+
+        // Only process each day once
+        if (processedDays.has(dayKey)) return;
+        processedDays.add(dayKey);
+
+        // Find day boundaries in data
+        const dayStart = sortedData.findIndex(d => 
+          new Date(d.timestamp).toDateString() === dayKey
+        );
+        const dayEnd = sortedData.findLastIndex(d => 
+          new Date(d.timestamp).toDateString() === dayKey
+        );
+
+        if (dayStart === -1 || dayEnd === -1) return;
+
+        // Day divider at market open (9:30 AM)
+        const marketOpenIndex = sortedData.findIndex(d => {
+          const dt = new Date(d.timestamp);
+          return dt.toDateString() === dayKey && 
+                 dt.getHours() === 9 && dt.getMinutes() >= 30;
+        });
+
+        if (marketOpenIndex !== -1) {
+          markLines.push({
+            xAxis: marketOpenIndex,
+            lineStyle: {
+              color: '#64748b',
+              type: 'solid',
+              width: 1,
+              opacity: 0.8
+            },
+            label: {
+              show: false
+            }
+          });
+        }
+
+        // Pre-market session (4:00 AM - 9:30 AM) - Blue tint
+        const preMarketStart = sortedData.findIndex(d => {
+          const dt = new Date(d.timestamp);
+          return dt.toDateString() === dayKey && dt.getHours() >= 4;
+        });
+        const preMarketEnd = sortedData.findIndex(d => {
+          const dt = new Date(d.timestamp);
+          return dt.toDateString() === dayKey && 
+                 dt.getHours() === 9 && dt.getMinutes() >= 30;
+        });
+
+        if (preMarketStart !== -1 && preMarketEnd !== -1 && preMarketStart < preMarketEnd) {
+          markAreas.push([
+            { xAxis: preMarketStart },
+            { 
+              xAxis: preMarketEnd,
+              itemStyle: {
+                color: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 0
+              }
+            }
+          ]);
+        }
+
+        // After-hours session (4:00 PM - 8:00 PM) - Purple tint
+        const afterHoursStart = sortedData.findIndex(d => {
+          const dt = new Date(d.timestamp);
+          return dt.toDateString() === dayKey && dt.getHours() >= 16;
+        });
+        const afterHoursEnd = sortedData.findIndex(d => {
+          const dt = new Date(d.timestamp);
+          return dt.toDateString() === dayKey && dt.getHours() >= 20;
+        });
+
+        if (afterHoursStart !== -1) {
+          const endIndex = afterHoursEnd !== -1 ? afterHoursEnd : 
+                          Math.min(dayEnd + 1, sortedData.length - 1);
+          
+          if (afterHoursStart < endIndex) {
+            markAreas.push([
+              { xAxis: afterHoursStart },
+              { 
+                xAxis: endIndex,
+                itemStyle: {
+                  color: 'rgba(147, 51, 234, 0.1)',
+                  borderWidth: 0
+                }
+              }
+            ]);
+          }
+        }
+      });
+
+      return { markAreas, markLines };
+    };
+
+    const { markAreas, markLines } = generateMarketSessions();
+
     const option = {
       backgroundColor: 'transparent',
       title: {
@@ -82,9 +188,16 @@ export default function WorkingCandlestickChart({
           const item = sortedData[dataIndex];
           if (!item) return '';
           
+          const timestamp = new Date(item.timestamp);
+          const hour = timestamp.getHours();
+          const sessionType = hour < 9.5 ? '🌅 Pre-Market' : 
+                            hour >= 16 ? '🌙 After-Hours' : 
+                            '📈 Regular Market';
+          
           return `
             <div style="padding: 8px;">
-              <div style="font-weight: bold; margin-bottom: 4px;">${new Date(item.timestamp).toLocaleString()}</div>
+              <div style="font-weight: bold; margin-bottom: 4px;">${timestamp.toLocaleString()}</div>
+              <div style="color: #64748b; font-size: 11px; margin-bottom: 4px;">${sessionType}</div>
               <div>Open: $${parseFloat(item.open).toFixed(2)}</div>
               <div>High: $${parseFloat(item.high).toFixed(2)}</div>
               <div>Low: $${parseFloat(item.low).toFixed(2)}</div>
@@ -189,6 +302,14 @@ export default function WorkingCandlestickChart({
               borderColor: '#34d399',
               borderColor0: '#f87171'
             }
+          },
+          markArea: {
+            silent: true,
+            data: markAreas
+          },
+          markLine: {
+            silent: true,
+            data: markLines
           }
         },
         {
