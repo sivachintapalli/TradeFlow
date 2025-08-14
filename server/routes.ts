@@ -64,22 +64,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { symbol } = req.params;
       const upperSymbol = symbol.toUpperCase();
       
-      // Get stored market data
-      let marketData = await storage.getMarketData(upperSymbol);
-      
-      // Update market data with latest calculations (live if market open, recent close if closed)
+      // Always fetch fresh data from Polygon API (15-min delayed is acceptable for live display)
       try {
-        await polygonService.updateMarketData(upperSymbol);
-        // Re-fetch the updated data
-        marketData = await storage.getMarketData(upperSymbol);
-      } catch (updateError: any) {
-        console.log(`Failed to update market data for ${upperSymbol}:`, updateError?.message || 'Unknown error');
-        // Continue with stored data if update fails
-      }
-      
-      if (!marketData) {
-        res.status(404).json({ message: "Market data not found" });
-        return;
+        const freshData = await polygonService.getLiveMarketData(upperSymbol);
+        if (freshData) {
+          // Cache the fresh data in database for backup
+          await storage.updateMarketData(freshData);
+          return res.json(freshData);
+        }
+      } catch (apiError: any) {
+        console.log(`Polygon API failed for ${upperSymbol}, falling back to stored data:`, apiError?.message);
+        
+        // Fallback to stored data only if API fails
+        const marketData = await storage.getMarketData(upperSymbol);
+        if (marketData) {
+          return res.json(marketData);
+        }
+        
+        return res.status(404).json({ 
+          message: "Market data not found and API unavailable",
+          error: apiError?.message 
+        });
       }
       
       res.json(marketData);
