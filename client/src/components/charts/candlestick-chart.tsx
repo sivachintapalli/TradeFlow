@@ -35,14 +35,31 @@ export default function CandlestickChart({
 
     // Process data for ECharts candlestick format: [timestamp, open, close, low, high]
     const processedData = data.map((item, index) => {
-      const result = [
-        new Date(item.timestamp).getTime(),
-        parseFloat(item.open),
-        parseFloat(item.close),
-        parseFloat(item.low),
-        parseFloat(item.high),
-      ];
-      if (index < 3) console.log('[CandlestickChart] Data point', index, '-> OHLC:', [result[1], result[4], result[3], result[2]], 'Volume:', item.volume);
+      const timestamp = new Date(item.timestamp).getTime();
+      const open = parseFloat(item.open);
+      const close = parseFloat(item.close);
+      const low = parseFloat(item.low);
+      const high = parseFloat(item.high);
+      
+      // Validate data sanity
+      if (open > 10000 || close > 10000 || low > 10000 || high > 10000) {
+        console.error('[CandlestickChart] Invalid price data detected:', {
+          timestamp: item.timestamp,
+          open: item.open,
+          close: item.close,
+          low: item.low,
+          high: item.high
+        });
+      }
+      
+      const result = [timestamp, open, close, low, high];
+      if (index < 3) {
+        console.log('[CandlestickChart] Data point', index, ':', {
+          timestamp: new Date(timestamp).toISOString(),
+          open, close, low, high,
+          volume: item.volume
+        });
+      }
       return result;
     });
 
@@ -108,8 +125,7 @@ export default function CandlestickChart({
       },
       xAxis: [
         {
-          type: 'category',
-          data: dates,
+          type: 'time',
           boundaryGap: false,
           axisLine: { 
             onZero: false,
@@ -128,9 +144,8 @@ export default function CandlestickChart({
           }
         },
         {
-          type: 'category',
+          type: 'time',
           gridIndex: 1,
-          data: dates,
           boundaryGap: false,
           axisLine: { 
             onZero: false,
@@ -199,6 +214,11 @@ export default function CandlestickChart({
             itemStyle: {
               borderWidth: 2,
             }
+          },
+          // Fix data interpretation - ensure proper OHLC mapping
+          encode: {
+            x: 0,  // timestamp (x-axis)
+            y: [1, 2, 3, 4]  // [open, close, low, high] for candlestick
           }
         },
         {
