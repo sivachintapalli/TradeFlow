@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, decimal, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, decimal, integer, timestamp, boolean, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -81,7 +81,10 @@ export const historicalData = pgTable("historical_data", {
   volume: integer("volume").notNull(),
   timeframe: text("timeframe").notNull(), // '1M', '5M', '15M', '1H', '1D'
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  // Unique constraint to prevent duplicate records
+  symbolTimestampTimeframe: unique().on(table.symbol, table.timestamp, table.timeframe),
+}));
 
 // Download jobs tracking table
 export const downloadJobs = pgTable("download_jobs", {
