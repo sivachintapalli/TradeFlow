@@ -70,39 +70,37 @@ export class PolygonService {
    */
   async getLiveMarketData(symbol: string): Promise<any> {
     try {
-      // Use previous day's data API which gives us the most recent close with volume
-      const url = `${this.baseUrl}/v2/aggs/ticker/${symbol}/prev?adjusted=true&apikey=${this.apiKey}`;
-      const response = await fetch(url);
+      // First, get the 5-day range to find the current close and previous close
+      const fiveDaysAgo = new Date();
+      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+      const today = new Date();
       
-      if (!response.ok) {
-        throw new Error(`Polygon API error: ${response.status} ${response.statusText}`);
+      const rangeUrl = `${this.baseUrl}/v2/aggs/ticker/${symbol}/range/1/day/${fiveDaysAgo.toISOString().split('T')[0]}/${today.toISOString().split('T')[0]}?adjusted=true&sort=desc&apikey=${this.apiKey}`;
+      const rangeResponse = await fetch(rangeUrl);
+      
+      if (!rangeResponse.ok) {
+        throw new Error(`Polygon API error: ${rangeResponse.status} ${rangeResponse.statusText}`);
       }
       
-      const data = await response.json();
+      const rangeData = await rangeResponse.json();
+      console.log(`📊 [API RESPONSE] Status: ${rangeData.status}, Results count: ${rangeData.results?.length || 0}`);
       
-      if (data.status === 'OK' && data.results && data.results.length > 0) {
-        const result = data.results[0];
-        const currentPrice = result.c; // close price
+      if ((rangeData.status === 'OK' || rangeData.status === 'DELAYED') && rangeData.results && rangeData.results.length >= 1) {
+        const currentTradingDay = rangeData.results[0]; // Most recent trading day
+        const currentPrice = currentTradingDay.c;
+        const volume = currentTradingDay.v;
         
-        // For proper daily change calculation, get the previous trading day's close
-        // During market hours, this should be compared to the current real-time price
-        let previousClose = result.o; // fallback to open
+        // Get previous trading day's close for change calculation
+        let previousClose = currentTradingDay.o; // fallback to today's open
         
-        try {
-          // Get 2-day range to ensure we have proper previous close
-          const twoDayUrl = `${this.baseUrl}/v2/aggs/ticker/${symbol}/range/1/day/${this.getPreviousBusinessDay()}/${this.getPreviousBusinessDay()}?adjusted=true&apikey=${this.apiKey}`;
-          const prevResponse = await fetch(twoDayUrl);
-          
-          if (prevResponse.ok) {
-            const prevData = await prevResponse.json();
-            if (prevData.status === 'OK' && prevData.results && prevData.results.length > 0) {
-              previousClose = prevData.results[0].c;
-              console.log(`📊 [PREV CLOSE] Retrieved previous trading day close for ${symbol}: $${previousClose.toFixed(2)}`);
-            }
-          }
-        } catch (e) {
-          console.warn(`⚠️ Could not fetch previous close for ${symbol}, using open price:`, e.message);
-          previousClose = result.o;
+        if (rangeData.results.length >= 2) {
+          const previousTradingDay = rangeData.results[1];
+          previousClose = previousTradingDay.c;
+          const currentDate = new Date(currentTradingDay.t).toLocaleDateString();
+          const prevDate = new Date(previousTradingDay.t).toLocaleDateString();
+          console.log(`📊 [TRADING DAYS] Current: ${currentDate} ($${currentPrice.toFixed(2)}), Previous: ${prevDate} ($${previousClose.toFixed(2)})`);
+        } else {
+          console.log(`📊 [SINGLE DAY] Only one day of data available, using open as previous close`);
         }
         
         const change = currentPrice - previousClose;
@@ -117,7 +115,7 @@ export class PolygonService {
           price: currentPrice.toFixed(2),
           change: change.toFixed(2),
           changePercent: changePercent.toFixed(2),
-          volume: result.v,
+          volume: volume,
           lastUpdate: new Date()
         };
       }

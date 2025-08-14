@@ -115,3 +115,6 @@ Technology Stack: Prefers TypeScript/Node.js over Python for this full-stack pro
 - ✅ Implemented pagination support - now downloading 200K+ records vs previous 10K limit
 - ✅ Optimized batch processing - 50,000 records per API call with automatic pagination
 - ✅ Full year coverage achieved - 203,859 records spanning Aug 2024 to Aug 2025 (207% efficiency)
+- ✅ **CRITICAL FIX**: Fixed market data daily change calculation to match Yahoo Finance
+- ✅ Now compares current price ($644.89) to previous trading day close ($642.69) = +$2.20 (+0.34%)
+- ✅ Proper 5-day range API implementation with DELAYED status handling
