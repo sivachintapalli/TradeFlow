@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiRequest } from "@/lib/queryClient";
 import { Search, Download, Loader2, AlertCircle } from "lucide-react";
+import CandlestickChart from "@/components/charts/candlestick-chart";
 
 interface HistoricalDataPoint {
   id: string;
@@ -226,48 +227,34 @@ export default function AdvancedHistoricalChart({ symbol = "SPY" }: AdvancedHist
       );
     }
 
-    // Display authentic market data from Polygon API
+    // Display authentic market data from Polygon API with actual candlestick chart
     return (
-      <div className="relative h-96 bg-navy-800 rounded-lg p-4">
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Session shading backgrounds */}
-          <div className="absolute inset-y-0 left-0 w-1/4 bg-blue-500 opacity-10"></div> {/* Pre-market */}
-          <div className="absolute inset-y-0 left-1/4 w-2/4 bg-transparent"></div> {/* Regular session */}
-          <div className="absolute inset-y-0 right-0 w-1/4 bg-gray-500 opacity-10"></div> {/* Post-market */}
-        </div>
-        
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-white font-semibold">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <h3 className="text-white font-semibold text-lg">
               {currentSymbol} - {historicalData.length} candles (Polygon API)
             </h3>
             <div className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded">
               LIVE DATA
             </div>
           </div>
-          <div className="text-sm text-gray-400">
-            Latest: {historicalData[0]?.timestamp ? new Date(historicalData[0].timestamp).toLocaleString() : 'N/A'}
+          <div className="text-right text-sm text-gray-400">
+            <div>Latest: {historicalData[0]?.timestamp ? new Date(historicalData[0].timestamp).toLocaleString() : 'N/A'}</div>
+            <div>Price Range: ${Math.min(...historicalData.map(d => parseFloat(d.low))).toFixed(2)} - ${Math.max(...historicalData.map(d => parseFloat(d.high))).toFixed(2)}</div>
           </div>
-          <div className="text-sm text-gray-400 mt-2">
-            Price Range: ${Math.min(...historicalData.map(d => parseFloat(d.low))).toFixed(2)} - ${Math.max(...historicalData.map(d => parseFloat(d.high))).toFixed(2)}
-          </div>
-          <div className="text-xs text-gray-500 mt-2">
-            Data Source: Polygon.io Real-Time Market Data
-          </div>
-          
-          {/* Crosshair tooltip */}
-          {crosshairData && (
-            <div className="absolute top-4 right-4 bg-black/80 rounded-lg p-3 text-sm">
-              <div className="text-white font-semibold">{crosshairData.symbol}</div>
-              <div className="text-gray-300">Time: {new Date(crosshairData.timestamp).toLocaleString()}</div>
-              <div className="text-gray-300">O: ${crosshairData.open}</div>
-              <div className="text-gray-300">H: ${crosshairData.high}</div>
-              <div className="text-gray-300">L: ${crosshairData.low}</div>
-              <div className="text-gray-300">C: ${crosshairData.close}</div>
-              <div className="text-gray-300">Vol: {crosshairData.volume.toLocaleString()}</div>
-            </div>
-          )}
         </div>
+        <div className="text-xs text-gray-500">
+          Data Source: Polygon.io Real-Time Market Data
+        </div>
+        
+        {/* ECharts Candlestick Chart */}
+        <CandlestickChart 
+          data={historicalData}
+          symbol={currentSymbol || 'Unknown'}
+          isHistorical={true}
+          className="h-96 w-full bg-navy-800 rounded-lg"
+        />
       </div>
     );
   };
