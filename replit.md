@@ -118,3 +118,6 @@ Technology Stack: Prefers TypeScript/Node.js over Python for this full-stack pro
 - ✅ **CRITICAL FIX**: Fixed market data daily change calculation to match Yahoo Finance
 - ✅ Now compares current price ($644.89) to previous trading day close ($642.69) = +$2.20 (+0.34%)
 - ✅ Proper 5-day range API implementation with DELAYED status handling
+- ✅ **CHART SCALING**: Removed 500-bar limit, now loads 100K+ data points with infinite scroll
+- ✅ TradingView-style features: market session backgrounds, day dividers, zoom/pan controls
+- ✅ Fixed timeframe display: "1M" now shows as "1m" to avoid confusion with millions

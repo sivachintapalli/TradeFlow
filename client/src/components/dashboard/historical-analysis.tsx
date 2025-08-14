@@ -17,7 +17,9 @@ export default function HistoricalAnalysis() {
   const handleDownloadData = async () => {
     setIsDownloading(true);
     setDownloadProgress(0);
-    setDownloadStatus(`Preparing to download ${period} of ${timeframe} data for ${symbol}...`);
+    // Display user-friendly timeframe (1M -> 1m for minute) 
+    const displayTimeframe = timeframe === '1M' ? '1m' : timeframe;
+    setDownloadStatus(`Preparing to download ${period} of ${displayTimeframe} data for ${symbol}...`);
     
     try {
       const response = await fetch('/api/download-ticker', {

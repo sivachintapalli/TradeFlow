@@ -243,9 +243,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let progress = 0;
       const sendProgress = (prog: number, year?: number) => {
         progress = prog;
+        // Display user-friendly timeframe (1M -> 1m for minute)
+        const displayTimeframe = timeframe === '1M' ? '1m' : timeframe;
         const data = JSON.stringify({ 
           progress: Math.round(prog), 
-          message: `Downloading ${timeframe} data...`,
+          message: `Downloading ${displayTimeframe} data...`,
           year
         });
         res.write(`data: ${data}\n\n`);

@@ -564,7 +564,9 @@ export class PolygonService {
     // Convert timeframe to Polygon API parameters
     const { timespan, multiplier } = this.parseTimeframe(timeframe);
     
-    console.log(`Downloading ${period} of ${timeframe} data for ${symbol} from ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+    // Display user-friendly timeframe (1M -> 1m for minute)
+    const displayTimeframe = timeframe === '1M' ? '1m' : timeframe;
+    console.log(`Downloading ${period} of ${displayTimeframe} data for ${symbol} from ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
     
     // Create or get existing download job
     const { jobId, isExisting } = await this.createDownloadJob(symbol, timeframe, period, startDate, endDate);
