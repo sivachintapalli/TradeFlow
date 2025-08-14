@@ -18,13 +18,15 @@ interface WorkingCandlestickChartProps {
   symbol: string;
   height?: string;
   onZoomChange?: (start: number, end: number) => void;
+  onDataRangeChange?: (direction: 'older' | 'newer') => void;
 }
 
 export default function WorkingCandlestickChart({ 
   data, 
   symbol, 
   height = "400px",
-  onZoomChange
+  onZoomChange,
+  onDataRangeChange
 }: WorkingCandlestickChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
@@ -366,18 +368,37 @@ export default function WorkingCandlestickChart({
 
     chartInstance.current.setOption(option);
 
-    // Handle dataZoom events for infinite scrolling
-    if (onZoomChange) {
-      chartInstance.current.off('dataZoom');
-      chartInstance.current.on('dataZoom', (params: any) => {
-        if (params.batch && params.batch[0]) {
-          const { start, end } = params.batch[0];
-          const startIndex = Math.floor((start / 100) * data.length);
-          const endIndex = Math.floor((end / 100) * data.length);
+    // Handle dataZoom events for zoom change and infinite scrolling
+    chartInstance.current.off('dataZoom');
+    chartInstance.current.on('dataZoom', (params: any) => {
+      if (params.batch && params.batch[0]) {
+        const { start, end } = params.batch[0];
+        const startIndex = Math.floor((start / 100) * data.length);
+        const endIndex = Math.floor((end / 100) * data.length);
+        
+        // Trigger zoom change callback
+        if (onZoomChange) {
           onZoomChange(startIndex, endIndex);
         }
-      });
-    }
+        
+        // Check for infinite scroll triggers
+        if (onDataRangeChange) {
+          const totalDataLength = data.length;
+          
+          // If user has scrolled near the beginning (older data), load more older data
+          if (startIndex < 50) {
+            console.log('🔄 Triggering infinite scroll - loading older data');
+            onDataRangeChange('older');
+          }
+          
+          // If user has scrolled near the end (newer data), load more newer data  
+          if (endIndex > totalDataLength - 50) {
+            console.log('🔄 Triggering infinite scroll - loading newer data');
+            onDataRangeChange('newer');
+          }
+        }
+      }
+    });
 
     // Handle resize
     const handleResize = () => {

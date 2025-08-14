@@ -223,6 +223,7 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
           symbol={symbol}
           height="450px"
           onZoomChange={handleZoomChange}
+          onDataRangeChange={loadMoreData}
         />
         
         {/* Market Session Legend */}
