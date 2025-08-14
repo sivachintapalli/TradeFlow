@@ -83,6 +83,23 @@ export const historicalData = pgTable("historical_data", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Download jobs tracking table
+export const downloadJobs = pgTable("download_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  symbol: text("symbol").notNull(),
+  timeframe: text("timeframe").notNull(),
+  period: text("period").notNull(),
+  status: text("status").notNull().default("in_progress"), // in_progress, completed, failed
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  expectedRecords: integer("expected_records").notNull().default(0),
+  currentRecords: integer("current_records").notNull().default(0),
+  progressPercentage: decimal("progress_percentage", { precision: 5, scale: 2 }).notNull().default("0"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -123,6 +140,12 @@ export const insertHistoricalDataSchema = createInsertSchema(historicalData).omi
   createdAt: true,
 });
 
+export const insertDownloadJobSchema = createInsertSchema(downloadJobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -138,3 +161,5 @@ export type InsertTechnicalIndicators = z.infer<typeof insertTechnicalIndicators
 export type TechnicalIndicators = typeof technicalIndicators.$inferSelect;
 export type InsertHistoricalData = z.infer<typeof insertHistoricalDataSchema>;
 export type HistoricalData = typeof historicalData.$inferSelect;
+export type InsertDownloadJob = z.infer<typeof insertDownloadJobSchema>;
+export type DownloadJob = typeof downloadJobs.$inferSelect;

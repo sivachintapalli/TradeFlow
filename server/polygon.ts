@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { historicalData, marketData } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { historicalData, marketData, downloadJobs } from "@shared/schema";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 export interface PolygonCandle {
   c: number; // close
@@ -361,6 +361,14 @@ export class PolygonService {
     
     console.log(`Downloading ${period} of ${timeframe} data for ${symbol} from ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
     
+    // Create or get existing download job
+    const { jobId, isExisting } = await this.createDownloadJob(symbol, timeframe, period, startDate, endDate);
+    
+    if (isExisting) {
+      console.log(`Found existing download job for ${symbol} ${timeframe} ${period}, monitoring progress`);
+      return;
+    }
+    
     const years = this.getYearRange(startDate, endDate);
     let processedYears = 0;
     
@@ -392,6 +400,19 @@ export class PolygonService {
     
     if (progressCallback) {
       progressCallback(100);
+    }
+    
+    // Mark job as completed
+    try {
+      await db.update(downloadJobs)
+        .set({ 
+          status: 'completed',
+          progressPercentage: "100",
+          updatedAt: new Date()
+        })
+        .where(eq(downloadJobs.id, jobId));
+    } catch (error: any) {
+      console.warn('Error updating download job status:', error.message);
     }
   }
 
@@ -500,16 +521,170 @@ export class PolygonService {
   }
 
   /**
-   * Get download progress (mock implementation for now)
+   * Get download progress based on active downloads and database records
    */
-  async getDownloadProgress(symbol: string): Promise<{ percentage: number; status: string; completed?: boolean; error?: string }> {
-    // This would typically check a cache or database for actual progress
-    // For now, return a default response
-    return {
-      percentage: 0,
-      status: 'No active download',
-      completed: true
-    };
+  async getDownloadProgress(symbol: string, timeframe?: string, period?: string): Promise<{ percentage: number; status: string; completed?: boolean; error?: string; year?: number }> {
+    try {
+      // Check for active download jobs
+      let activeJobQuery = db.select().from(downloadJobs)
+        .where(and(
+          eq(downloadJobs.symbol, symbol.toUpperCase()),
+          eq(downloadJobs.status, 'in_progress')
+        ))
+        .orderBy(desc(downloadJobs.createdAt))
+        .limit(1);
+
+      // Filter by timeframe and period if provided
+      if (timeframe && period) {
+        activeJobQuery = db.select().from(downloadJobs)
+          .where(and(
+            eq(downloadJobs.symbol, symbol.toUpperCase()),
+            eq(downloadJobs.timeframe, timeframe),
+            eq(downloadJobs.period, period),
+            eq(downloadJobs.status, 'in_progress')
+          ))
+          .orderBy(desc(downloadJobs.createdAt))
+          .limit(1);
+      }
+
+      const activeJobs = await activeJobQuery;
+      
+      if (activeJobs.length > 0) {
+        const job = activeJobs[0];
+        
+        // Count current records in database for this job's parameters
+        const currentCount = await db.select({ count: sql<number>`count(*)` })
+          .from(historicalData)
+          .where(and(
+            eq(historicalData.symbol, job.symbol),
+            eq(historicalData.timeframe, job.timeframe)
+          ));
+
+        const currentRecords = currentCount[0]?.count || 0;
+        const expectedRecords = job.expectedRecords || 1;
+        const percentage = Math.min(Math.round((currentRecords / expectedRecords) * 100), 100);
+
+        // Update job progress
+        await db.update(downloadJobs)
+          .set({ 
+            currentRecords: currentRecords,
+            progressPercentage: percentage.toString(),
+            updatedAt: new Date()
+          })
+          .where(eq(downloadJobs.id, job.id));
+
+        // Check if download is complete
+        if (currentRecords >= expectedRecords || percentage >= 100) {
+          await db.update(downloadJobs)
+            .set({ 
+              status: 'completed',
+              progressPercentage: "100",
+              updatedAt: new Date()
+            })
+            .where(eq(downloadJobs.id, job.id));
+
+          return {
+            percentage: 100,
+            status: 'Download completed',
+            completed: true
+          };
+        }
+
+        return {
+          percentage,
+          status: `Downloading ${job.timeframe} data... ${currentRecords}/${expectedRecords} records`,
+          completed: false,
+          year: job.startDate.getFullYear()
+        };
+      }
+
+      return {
+        percentage: 0,
+        status: 'No active download',
+        completed: true
+      };
+    } catch (error: any) {
+      console.error('Error getting download progress:', error);
+      return {
+        percentage: 0,
+        status: 'Error checking progress',
+        completed: true,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Create or get existing download job
+   */
+  async createDownloadJob(symbol: string, timeframe: string, period: string, startDate: Date, endDate: Date): Promise<{ jobId: string; isExisting: boolean }> {
+    try {
+      // Check for existing job with same parameters
+      const existingJobs = await db.select().from(downloadJobs)
+        .where(and(
+          eq(downloadJobs.symbol, symbol.toUpperCase()),
+          eq(downloadJobs.timeframe, timeframe),
+          eq(downloadJobs.period, period),
+          eq(downloadJobs.status, 'in_progress')
+        ))
+        .limit(1);
+
+      if (existingJobs.length > 0) {
+        return { jobId: existingJobs[0].id, isExisting: true };
+      }
+
+      // Calculate expected records based on timeframe and period
+      const expectedRecords = this.calculateExpectedRecords(timeframe, period, startDate, endDate);
+
+      // Create new job
+      const newJob = await db.insert(downloadJobs)
+        .values({
+          symbol: symbol.toUpperCase(),
+          timeframe,
+          period,
+          status: 'in_progress',
+          startDate,
+          endDate,
+          expectedRecords,
+          currentRecords: 0,
+          progressPercentage: "0"
+        })
+        .returning();
+
+      return { jobId: newJob[0].id, isExisting: false };
+    } catch (error: any) {
+      console.error('Error creating download job:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate expected number of records based on timeframe and period
+   */
+  private calculateExpectedRecords(timeframe: string, period: string, startDate: Date, endDate: Date): number {
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Market is open ~252 days per year (excluding weekends and holidays)
+    const marketDaysPerYear = 252;
+    const marketDays = Math.ceil((diffDays / 365) * marketDaysPerYear);
+
+    switch (timeframe) {
+      case '1M':
+        return marketDays * 390; // ~6.5 hours * 60 minutes
+      case '5M':
+        return marketDays * 78;  // ~6.5 hours * 12 (5-min intervals)
+      case '15M':
+        return marketDays * 26;  // ~6.5 hours * 4 (15-min intervals)
+      case '30M':
+        return marketDays * 13;  // ~6.5 hours * 2 (30-min intervals)
+      case '1H':
+        return marketDays * 7;   // ~6.5 hours
+      case '1D':
+        return marketDays;       // 1 per day
+      default:
+        return marketDays * 100; // Default estimate
+    }
   }
 }
 

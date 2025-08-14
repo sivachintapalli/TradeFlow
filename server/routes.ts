@@ -228,6 +228,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid period. Use 1Y, 5Y, 10Y, or MAX" });
       }
       
+      // Check if there's already an active download for this combination
+      const existingProgress = await polygonService.getDownloadProgress(upperSymbol, timeframe, period);
+      
+      if (!existingProgress.completed && existingProgress.percentage > 0) {
+        // Return existing progress for active downloads instead of starting new one
+        return res.json({
+          progress: existingProgress.percentage,
+          message: existingProgress.status,
+          completed: false,
+          year: existingProgress.year
+        });
+      }
+      
       // Set up SSE for progress updates
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
@@ -238,9 +251,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       let progress = 0;
-      const sendProgress = (prog: number, year?: number) => {
+      const sendProgress = (prog: number, message?: string, year?: number) => {
         progress = prog;
-        const data = JSON.stringify({ progress: Math.round(prog), year });
+        const data = JSON.stringify({ 
+          progress: Math.round(prog), 
+          message: message || `Downloading ${timeframe} data...`,
+          year
+        });
         res.write(`data: ${data}\n\n`);
       };
       
@@ -248,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await polygonService.downloadHistoricalData(upperSymbol, period, sendProgress, timeframe);
         await polygonService.updateMarketData(upperSymbol);
         
-        res.write(`data: ${JSON.stringify({ progress: 100, completed: true })}\n\n`);
+        res.write(`data: ${JSON.stringify({ progress: 100, completed: true, message: 'Download completed' })}\n\n`);
         res.end();
       } catch (error: any) {
         const errorData = JSON.stringify({ 
@@ -414,8 +431,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { symbol } = req.params;
       const upperSymbol = symbol.toUpperCase();
       
-      // Get progress from the polygon service
-      const progress = await polygonService.getDownloadProgress(upperSymbol);
+      // Extract query parameters for more specific progress tracking
+      const { timeframe, period } = req.query as { timeframe?: string; period?: string };
+      
+      // Get progress from the polygon service with specific parameters
+      const progress = await polygonService.getDownloadProgress(upperSymbol, timeframe, period);
       res.json(progress);
     } catch (error: any) {
       console.error('Progress check error:', error);

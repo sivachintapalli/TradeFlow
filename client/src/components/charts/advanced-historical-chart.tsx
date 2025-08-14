@@ -153,7 +153,11 @@ export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1
       const response = await fetch('/api/download-ticker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol: currentSymbol, period: selectedPeriod }),
+        body: JSON.stringify({ 
+          symbol: currentSymbol, 
+          period: selectedPeriod,
+          timeframe: selectedTimeframe 
+        }),
       });
 
       if (!response.ok) {
