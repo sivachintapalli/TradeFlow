@@ -1,0 +1,190 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(222, 84%, 4.9%);
+  --foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 84%, 4.9%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --popover: hsl(222, 84%, 4.9%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --primary: hsl(263, 54%, 59%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(217, 32%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --accent: hsl(217, 32%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32%, 17%);
+  --input: hsl(217, 32%, 17%);
+  --ring: hsl(263, 70%, 50%);
+  --chart-1: hsl(263, 54%, 59%);
+  --chart-2: hsl(122, 64%, 49%);
+  --chart-3: hsl(34, 93%, 56%);
+  --chart-4: hsl(147, 79%, 42%);
+  --chart-5: hsl(341, 75%, 51%);
+  --sidebar: hsl(222, 84%, 4.9%);
+  --sidebar-foreground: hsl(210, 40%, 98%);
+  --sidebar-primary: hsl(263, 54%, 59%);
+  --sidebar-primary-foreground: hsl(210, 40%, 98%);
+  --sidebar-accent: hsl(217, 32%, 17%);
+  --sidebar-accent-foreground: hsl(210, 40%, 98%);
+  --sidebar-border: hsl(217, 32%, 17%);
+  --sidebar-ring: hsl(263, 70%, 50%);
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'Roboto Mono', monospace;
+  --radius: 0.75rem;
+
+  /* Trading Dashboard Custom Colors */
+  --navy-900: hsl(222, 84%, 4.9%);
+  --navy-800: hsl(217, 32%, 17%);
+  --navy-700: hsl(215, 25%, 27%);
+  --purple-primary: hsl(263, 54%, 59%);
+  --green-bullish: hsl(122, 64%, 51%);
+  --mocha: hsl(25, 17%, 48%);
+  --red-bearish: hsl(0, 84%, 60%);
+}
+
+.dark {
+  --background: hsl(222, 84%, 4.9%);
+  --foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 84%, 4.9%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --popover: hsl(222, 84%, 4.9%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --primary: hsl(263, 54%, 59%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(217, 32%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --accent: hsl(217, 32%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32%, 17%);
+  --input: hsl(217, 32%, 17%);
+  --ring: hsl(263, 70%, 50%);
+  --chart-1: hsl(263, 54%, 59%);
+  --chart-2: hsl(122, 64%, 49%);
+  --chart-3: hsl(34, 93%, 56%);
+  --chart-4: hsl(147, 79%, 42%);
+  --chart-5: hsl(341, 75%, 51%);
+  --sidebar: hsl(222, 84%, 4.9%);
+  --sidebar-foreground: hsl(210, 40%, 98%);
+  --sidebar-primary: hsl(263, 54%, 59%);
+  --sidebar-primary-foreground: hsl(210, 40%, 98%);
+  --sidebar-accent: hsl(217, 32%, 17%);
+  --sidebar-accent-foreground: hsl(210, 40%, 98%);
+  --sidebar-border: hsl(217, 32%, 17%);
+  --sidebar-ring: hsl(263, 70%, 50%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background: var(--navy-900);
+    color: white;
+  }
+}
+
+@layer components {
+  /* Glass Morphism Effects */
+  .glass-panel {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-card {
+    background: rgba(51, 65, 85, 0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .chart-container {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%);
+    backdrop-filter: blur(12px);
+  }
+
+  /* Glow Effects */
+  .glow-purple {
+    box-shadow: 0 0 20px rgba(132, 79, 193, 0.3);
+  }
+
+  .glow-green {
+    box-shadow: 0 0 15px rgba(56, 206, 60, 0.2);
+  }
+
+  .glow-red {
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+  }
+
+  /* Tab Styles */
+  .tab-active {
+    background: linear-gradient(135deg, var(--purple-primary) 0%, hsl(271, 81%, 56%) 100%);
+  }
+
+  /* Price Colors */
+  .price-up { 
+    color: var(--green-bullish); 
+  }
+  
+  .price-down { 
+    color: var(--red-bearish); 
+  }
+
+  /* Loading Animation */
+  .loading-bar {
+    background: linear-gradient(90deg, transparent, rgba(132, 79, 193, 0.4), transparent);
+    animation: loading 2s infinite;
+  }
+
+  @keyframes loading {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* Pulse Animation */
+  .pulse-dot {
+    animation: pulse-dot 2s infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Custom Scrollbar */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(132, 79, 193, 0.3) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(132, 79, 193, 0.3);
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(132, 79, 193, 0.5);
+  }
+}

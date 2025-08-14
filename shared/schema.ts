@@ -1,0 +1,117 @@
+import { sql } from "drizzle-orm";
+import { pgTable, text, varchar, decimal, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+});
+
+export const positions = pgTable("positions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  symbol: text("symbol").notNull(),
+  quantity: integer("quantity").notNull(),
+  avgPrice: decimal("avg_price", { precision: 10, scale: 2 }).notNull(),
+  currentPrice: decimal("current_price", { precision: 10, scale: 2 }).notNull(),
+  pnl: decimal("pnl", { precision: 10, scale: 2 }).notNull(),
+  pnlPercent: decimal("pnl_percent", { precision: 5, scale: 2 }).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const orders = pgTable("orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  symbol: text("symbol").notNull(),
+  side: text("side").notNull(), // 'buy' or 'sell'
+  type: text("type").notNull(), // 'market', 'limit', 'stop', 'stop-limit'
+  quantity: integer("quantity").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }),
+  stopPrice: decimal("stop_price", { precision: 10, scale: 2 }),
+  status: text("status").notNull().default("pending"), // 'pending', 'filled', 'cancelled'
+  createdAt: timestamp("created_at").defaultNow(),
+  filledAt: timestamp("filled_at"),
+});
+
+export const marketData = pgTable("market_data", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  symbol: text("symbol").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  change: decimal("change", { precision: 10, scale: 2 }).notNull(),
+  changePercent: decimal("change_percent", { precision: 5, scale: 2 }).notNull(),
+  volume: integer("volume").notNull(),
+  lastUpdate: timestamp("last_update").defaultNow(),
+});
+
+export const portfolio = pgTable("portfolio", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  totalValue: decimal("total_value", { precision: 12, scale: 2 }).notNull(),
+  dayChange: decimal("day_change", { precision: 10, scale: 2 }).notNull(),
+  dayChangePercent: decimal("day_change_percent", { precision: 5, scale: 2 }).notNull(),
+  buyingPower: decimal("buying_power", { precision: 12, scale: 2 }).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const technicalIndicators = pgTable("technical_indicators", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  symbol: text("symbol").notNull(),
+  rsi: decimal("rsi", { precision: 5, scale: 2 }),
+  macd: decimal("macd", { precision: 8, scale: 4 }),
+  macdSignal: decimal("macd_signal", { precision: 8, scale: 4 }),
+  macdHistogram: decimal("macd_histogram", { precision: 8, scale: 4 }),
+  bollingerUpper: decimal("bollinger_upper", { precision: 10, scale: 2 }),
+  bollingerMiddle: decimal("bollinger_middle", { precision: 10, scale: 2 }),
+  bollingerLower: decimal("bollinger_lower", { precision: 10, scale: 2 }),
+  volume: integer("volume"),
+  avgVolume: integer("avg_volume"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schemas
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
+});
+
+export const insertPositionSchema = createInsertSchema(positions).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertOrderSchema = createInsertSchema(orders).omit({
+  id: true,
+  createdAt: true,
+  filledAt: true,
+}).extend({
+  price: z.string().optional(),
+  stopPrice: z.string().optional(),
+});
+
+export const insertMarketDataSchema = createInsertSchema(marketData).omit({
+  id: true,
+  lastUpdate: true,
+});
+
+export const insertPortfolioSchema = createInsertSchema(portfolio).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertTechnicalIndicatorsSchema = createInsertSchema(technicalIndicators).omit({
+  id: true,
+  updatedAt: true,
+});
+
+// Types
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+export type InsertPosition = z.infer<typeof insertPositionSchema>;
+export type Position = typeof positions.$inferSelect;
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
+export type Order = typeof orders.$inferSelect;
+export type InsertMarketData = z.infer<typeof insertMarketDataSchema>;
+export type MarketData = typeof marketData.$inferSelect;
+export type InsertPortfolio = z.infer<typeof insertPortfolioSchema>;
+export type Portfolio = typeof portfolio.$inferSelect;
+export type InsertTechnicalIndicators = z.infer<typeof insertTechnicalIndicatorsSchema>;
+export type TechnicalIndicators = typeof technicalIndicators.$inferSelect;
