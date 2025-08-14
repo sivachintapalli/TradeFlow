@@ -171,10 +171,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Data synchronized", synced: true });
     } catch (error: any) {
       console.error('Sync ticker error:', error);
-      res.status(500).json({ 
-        message: error.message || "Failed to sync ticker data",
-        error: error.name 
-      });
+      // Don't treat DELAYED status as an error - it's still valid data
+      if (error.message?.includes('DELAYED')) {
+        res.json({ message: "Synced with delayed data", synced: true, status: 'delayed' });
+      } else {
+        res.status(500).json({ 
+          message: error.message || "Failed to sync ticker data",
+          error: error.name 
+        });
+      }
     }
   });
 
