@@ -84,13 +84,30 @@ export class PolygonService {
         const result = data.results[0];
         const currentPrice = result.c; // close price
         
-        // Get a better previous close by looking at historical data or using a more accurate approach
-        // For now, calculate change based on the day's trading range
-        const dayOpen = result.o;
-        const change = currentPrice - dayOpen; // Daily change from open
-        const changePercent = ((change / dayOpen) * 100);
+        // Get previous close using Polygon's prev endpoint
+        let previousClose = result.o; // fallback to open
+        
+        try {
+          const prevCloseUrl = `${this.baseUrl}/v2/aggs/ticker/${symbol}/prev?adjusted=true&apikey=${this.apiKey}`;
+          const prevResponse = await fetch(prevCloseUrl);
+          
+          if (prevResponse.ok) {
+            const prevData = await prevResponse.json();
+            if (prevData.status === 'OK' && prevData.results && prevData.results.length > 0) {
+              previousClose = prevData.results[0].c;
+              console.log(`📊 [PREV CLOSE] Retrieved previous close for ${symbol}: $${previousClose.toFixed(2)}`);
+            }
+          }
+        } catch (e) {
+          console.warn(`⚠️ Could not fetch previous close for ${symbol}, using open price:`, e.message);
+          previousClose = result.o;
+        }
+        
+        const change = currentPrice - previousClose;
+        const changePercent = ((change / previousClose) * 100);
         
         console.log(`Fresh Polygon data for ${symbol}: $${currentPrice} (${change >= 0 ? '+' : ''}${change.toFixed(2)}, ${changePercent.toFixed(2)}%)`);
+        console.log(`Previous close: $${previousClose.toFixed(2)}, Current: $${currentPrice.toFixed(2)}`);
         
         return {
           id: `live-${symbol}`,
@@ -655,6 +672,15 @@ export class PolygonService {
     const startDate = new Date(endDate);
     
     switch (period) {
+      case '1M':
+        startDate.setMonth(endDate.getMonth() - 1);
+        break;
+      case '3M':
+        startDate.setMonth(endDate.getMonth() - 3);
+        break;
+      case '6M':
+        startDate.setMonth(endDate.getMonth() - 6);
+        break;
       case '1Y':
         startDate.setFullYear(endDate.getFullYear() - 1);
         break;
@@ -857,6 +883,26 @@ export class PolygonService {
       default:
         return marketDays * 100; // Default estimate
     }
+  }
+
+  /**
+   * Get previous business day in YYYY-MM-DD format
+   */
+  private getPreviousBusinessDay(): string {
+    const today = new Date();
+    let previousDay = new Date(today);
+    
+    // Go back 1 day initially
+    previousDay.setDate(today.getDate() - 1);
+    
+    // If it's Monday, go back to Friday (3 days)
+    if (previousDay.getDay() === 0) { // Sunday
+      previousDay.setDate(previousDay.getDate() - 2);
+    } else if (previousDay.getDay() === 6) { // Saturday
+      previousDay.setDate(previousDay.getDate() - 1);
+    }
+    
+    return previousDay.toISOString().split('T')[0];
   }
 }
 

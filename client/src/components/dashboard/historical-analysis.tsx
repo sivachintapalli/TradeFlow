@@ -115,10 +115,10 @@ export default function HistoricalAnalysis() {
                   <SelectValue placeholder="Select timeframe" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1M">1 Minute</SelectItem>
-                  <SelectItem value="5M">5 Minutes</SelectItem>
-                  <SelectItem value="15M">15 Minutes</SelectItem>
-                  <SelectItem value="30M">30 Minutes</SelectItem>
+                  <SelectItem value="1M">1 Minute (1m)</SelectItem>
+                  <SelectItem value="5M">5 Minutes (5m)</SelectItem>
+                  <SelectItem value="15M">15 Minutes (15m)</SelectItem>
+                  <SelectItem value="30M">30 Minutes (30m)</SelectItem>
                   <SelectItem value="1H">1 Hour</SelectItem>
                   <SelectItem value="1D">1 Day</SelectItem>
                 </SelectContent>

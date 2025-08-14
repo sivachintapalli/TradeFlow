@@ -212,10 +212,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const upperSymbol = symbol.toUpperCase();
-      const validPeriods = ['1Y', '5Y', '10Y', 'MAX'];
+      const validPeriods = ['1M', '3M', '6M', '1Y', '2Y', '5Y', '10Y', 'MAX'];
       
       if (!validPeriods.includes(period)) {
-        return res.status(400).json({ message: "Invalid period. Use 1Y, 5Y, 10Y, or MAX" });
+        return res.status(400).json({ message: "Invalid period. Use 1M, 3M, 6M, 1Y, 2Y, 5Y, 10Y, or MAX" });
       }
       
       // Check if there's already an active download for this combination

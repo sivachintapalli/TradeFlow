@@ -105,8 +105,10 @@ Technology Stack: Prefers TypeScript/Node.js over Python for this full-stack pro
 - **Next Priority**: Fix candlestick chart rendering and complete historical analysis interface
 
 ## Recent Fixes (August 14, 2025)
-- ✅ Fixed static $552.00 SPY price display - now shows real market data ($644.89)
-- ✅ Enhanced market data refresh system with 5-second intervals
-- ✅ Added intelligent status indicators (LIVE/RECENT/STALE) based on data timestamps
-- ✅ Improved error handling and automatic data synchronization
-- ✅ Respected Polygon API websocket limitation (single connection only)
+- ✅ Fixed market data calculation - now uses Polygon prev endpoint for accurate change calculation (+$0.00)
+- ✅ Fixed UI timeframe confusion - changed "1M" to "1m" displays to avoid confusion with months  
+- ✅ Expanded period validation - now supports 1M, 3M, 6M, 1Y, 2Y, 5Y, 10Y, MAX periods
+- ✅ Created comprehensive validation script - identifies exact record counts vs expected values
+- ✅ Added extensive download logging - complete visibility into each step of the process
+- ✅ Built professional progress modal component - better user experience for downloads
+- ⚠️ Identified Polygon API rate limiting - free tier restricts large historical datasets to ~5,000 records/year
