@@ -1,4 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface HistoricalDataPoint {
   id: string;
@@ -19,6 +22,9 @@ interface SimpleHistoricalChartProps {
 }
 
 export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M" }: SimpleHistoricalChartProps) {
+  const [viewRange, setViewRange] = useState({ start: 0, end: 100 }); // Show first 100 candles by default
+  const [zoomLevel, setZoomLevel] = useState(100); // Number of candles to show
+  
   // Fetch initial 1 year of data
   const { data: historicalData = [], isLoading } = useQuery({
     queryKey: [`/api/historical-data/${symbol}?timeframe=${timeframe}&limit=50000`],
@@ -41,8 +47,49 @@ export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M"
     );
   }
 
-  // Get recent data sample for display
-  const recentData = historicalData.slice(0, 10);
+  // Zoom and navigation controls
+  const handleZoomIn = () => {
+    const newZoom = Math.max(10, Math.floor(zoomLevel * 0.7));
+    setZoomLevel(newZoom);
+    setViewRange(prev => ({ 
+      start: prev.start, 
+      end: Math.min(prev.start + newZoom, historicalData.length) 
+    }));
+  };
+
+  const handleZoomOut = () => {
+    const newZoom = Math.min(historicalData.length, Math.floor(zoomLevel * 1.4));
+    setZoomLevel(newZoom);
+    setViewRange(prev => ({ 
+      start: prev.start, 
+      end: Math.min(prev.start + newZoom, historicalData.length) 
+    }));
+  };
+
+  const handleReset = () => {
+    setZoomLevel(100);
+    setViewRange({ start: 0, end: Math.min(100, historicalData.length) });
+  };
+
+  const handlePanLeft = () => {
+    const step = Math.floor(zoomLevel * 0.2);
+    setViewRange(prev => ({
+      start: Math.max(0, prev.start - step),
+      end: Math.max(step, prev.end - step)
+    }));
+  };
+
+  const handlePanRight = () => {
+    const step = Math.floor(zoomLevel * 0.2);
+    setViewRange(prev => ({
+      start: Math.min(historicalData.length - zoomLevel, prev.start + step),
+      end: Math.min(historicalData.length, prev.end + step)
+    }));
+  };
+
+  // Get data for current view
+  const viewData = historicalData.slice(viewRange.start, viewRange.end);
+  const recentData = viewData.slice(0, 10);
   const latestPrice = historicalData[0] ? parseFloat(historicalData[0].close) : 0;
   const previousPrice = historicalData[1] ? parseFloat(historicalData[1].close) : 0;
   const priceChange = latestPrice - previousPrice;
@@ -65,7 +112,32 @@ export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M"
         </div>
       </div>
 
-      {/* Temporary chart placeholder - working display */}
+      {/* Chart Controls */}
+      <div className="flex items-center justify-between p-4 bg-navy-800 rounded-lg">
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm" onClick={handlePanLeft} disabled={viewRange.start <= 0}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handlePanRight} disabled={viewRange.end >= historicalData.length}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <div className="h-4 w-px bg-gray-600 mx-2" />
+          <Button variant="outline" size="sm" onClick={handleZoomIn}>
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleZoomOut}>
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleReset}>
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="text-sm text-gray-400">
+          Showing {viewRange.start + 1}-{viewRange.end} of {historicalData.length} candles (Zoom: {zoomLevel})
+        </div>
+      </div>
+
+      {/* Chart Display */}
       <div className="h-96 w-full bg-navy-800 rounded-lg p-6">
         <div className="h-full flex flex-col">
           <div className="flex items-center justify-between mb-4">
@@ -99,15 +171,29 @@ export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M"
             </div>
             
             <div className="space-y-2">
-              <h5 className="text-gray-400 text-sm font-medium">Recent Data Sample:</h5>
+              <h5 className="text-gray-400 text-sm font-medium">
+                Current View Data ({viewData.length} candles):
+              </h5>
               <div className="space-y-1 max-h-48 overflow-y-auto">
-                {recentData.map((candle, index) => (
-                  <div key={candle.id} className="flex justify-between text-xs">
-                    <span className="text-gray-400">{new Date(candle.timestamp).toLocaleTimeString()}</span>
-                    <span className="text-white">${parseFloat(candle.close).toFixed(2)}</span>
-                    <span className="text-gray-400">{candle.volume.toLocaleString()}</span>
-                  </div>
-                ))}
+                {recentData.map((candle, index) => {
+                  const candleIndex = viewRange.start + index;
+                  return (
+                    <div key={candle.id} className="flex justify-between text-xs">
+                      <span className="text-gray-400">#{candleIndex} {new Date(candle.timestamp).toLocaleTimeString()}</span>
+                      <span className="text-white">${parseFloat(candle.close).toFixed(2)}</span>
+                      <span className="text-gray-400">{candle.volume.toLocaleString()}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Navigation info */}
+              <div className="mt-4 pt-2 border-t border-gray-700">
+                <div className="text-xs text-gray-500">
+                  <div>Pan: Use arrow buttons to navigate through history</div>
+                  <div>Zoom: + to see fewer candles in detail, - to see more candles</div>
+                  <div>Reset: Return to default 100-candle view</div>
+                </div>
               </div>
             </div>
           </div>
