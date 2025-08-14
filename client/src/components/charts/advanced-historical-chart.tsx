@@ -46,7 +46,7 @@ interface AdvancedHistoricalChartProps {
 
 export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1M" }: AdvancedHistoricalChartProps) {
   const [tickerInput, setTickerInput] = useState("");
-  const [currentSymbol, setCurrentSymbol] = useState<string | null>(null);
+  const [currentSymbol, setCurrentSymbol] = useState<string | null>(symbol);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
   const [showNewTickerUI, setShowNewTickerUI] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +63,14 @@ export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1
   const chartRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const queryClient = useQueryClient();
+
+  // Update current symbol when prop changes
+  useEffect(() => {
+    if (symbol && symbol !== currentSymbol) {
+      setCurrentSymbol(symbol);
+      setError(null);
+    }
+  }, [symbol, currentSymbol]);
 
   // Fetch ticker status
   const { data: tickerStatus } = useQuery<TickerStatus>({

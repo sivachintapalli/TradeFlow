@@ -31,11 +31,50 @@ export default function HistoricalAnalysis() {
       });
       
       if (response.ok) {
-        // Start polling for progress
-        pollDownloadProgress(symbol.toUpperCase());
+        // Handle Server-Sent Events for real-time progress
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        
+        if (reader) {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              const chunk = decoder.decode(value);
+              const lines = chunk.split('\n');
+              
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(line.slice(6));
+                    setDownloadProgress(data.progress || 0);
+                    setDownloadStatus(data.message || 'Processing...');
+                    
+                    if (data.completed) {
+                      setIsDownloading(false);
+                      setDownloadStatus('Download completed successfully!');
+                      setTimeout(() => setDownloadStatus(''), 3000);
+                      return;
+                    }
+                  } catch (e) {
+                    console.warn('Failed to parse SSE data:', line);
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Stream reading error:', e);
+          } finally {
+            reader.releaseLock();
+          }
+        }
+        
+        setIsDownloading(false);
       } else {
         const error = await response.json();
         setDownloadStatus(`Download failed: ${error.message}`);
+        setIsDownloading(false);
       }
     } catch (error) {
       console.error('Download failed:', error);
@@ -154,6 +193,7 @@ export default function HistoricalAnalysis() {
       {/* Chart */}
       {!isDownloading ? (
         <AdvancedHistoricalChart 
+          key={`${symbol}-${timeframe}-${period}`}  
           symbol={symbol}
           timeframe={timeframe}
         />
