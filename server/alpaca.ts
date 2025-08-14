@@ -109,14 +109,20 @@ export class AlpacaService {
       ...options.headers,
     };
 
+    console.log(`Making Alpaca API request to: ${url}`);
+    console.log(`Headers: APCA-API-KEY-ID exists: ${!!this.apiKey}, APCA-API-SECRET-KEY exists: ${!!this.secretKey}`);
+
     try {
       const response = await fetch(url, {
         ...options,
         headers,
       });
 
+      console.log(`Alpaca API response status: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.log(`Alpaca API error response: ${errorText}`);
         throw new Error(`Alpaca API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
@@ -131,14 +137,14 @@ export class AlpacaService {
    * Get account information
    */
   async getAccount(): Promise<AlpacaAccount> {
-    return this.makeRequest('/v2/account');
+    return this.makeRequest('/account');
   }
 
   /**
    * Get all positions
    */
   async getPositions(): Promise<AlpacaPosition[]> {
-    return this.makeRequest('/v2/positions');
+    return this.makeRequest('/positions');
   }
 
   /**
@@ -150,7 +156,7 @@ export class AlpacaService {
     params.append('limit', limit.toString());
     params.append('direction', 'desc');
 
-    return this.makeRequest(`/v2/orders?${params.toString()}`);
+    return this.makeRequest(`/orders?${params.toString()}`);
   }
 
   /**
@@ -166,7 +172,7 @@ export class AlpacaService {
     stop_price?: number;
     extended_hours?: boolean;
   }): Promise<AlpacaOrder> {
-    const order = await this.makeRequest('/v2/orders', {
+    const order = await this.makeRequest('/orders', {
       method: 'POST',
       body: JSON.stringify({
         ...orderData,
@@ -185,7 +191,7 @@ export class AlpacaService {
    * Cancel an order
    */
   async cancelOrder(orderId: string): Promise<void> {
-    await this.makeRequest(`/v2/orders/${orderId}`, {
+    await this.makeRequest(`/orders/${orderId}`, {
       method: 'DELETE',
     });
 
@@ -199,7 +205,7 @@ export class AlpacaService {
    * Cancel all orders
    */
   async cancelAllOrders(): Promise<void> {
-    await this.makeRequest('/v2/orders', {
+    await this.makeRequest('/orders', {
       method: 'DELETE',
     });
 
@@ -213,7 +219,7 @@ export class AlpacaService {
    * Get a specific order by ID
    */
   async getOrder(orderId: string): Promise<AlpacaOrder> {
-    return this.makeRequest(`/v2/orders/${orderId}`);
+    return this.makeRequest(`/orders/${orderId}`);
   }
 
   /**
