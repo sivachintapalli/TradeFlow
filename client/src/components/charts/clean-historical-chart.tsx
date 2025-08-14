@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import WorkingCandlestickChart from "@/components/charts/working-candlestick-chart";
@@ -26,12 +26,52 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
   const [viewRange, setViewRange] = useState({ start: 0, end: 250 }); // Show first 250 candles by default
   const [zoomLevel, setZoomLevel] = useState(250); // Number of candles to show
   const [currentZoomStart, setCurrentZoomStart] = useState(0); // Track current zoom position
+  const [allData, setAllData] = useState<HistoricalDataPoint[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // Fetch initial 1 year of data
   const { data: historicalData = [], isLoading } = useQuery({
     queryKey: [`/api/historical-data/${symbol}?timeframe=${timeframe}&limit=50000`],
     enabled: !!symbol,
   });
+
+  // Update allData when initial data loads
+  useEffect(() => {
+    if (Array.isArray(historicalData) && historicalData.length > 0) {
+      setAllData(historicalData);
+    }
+  }, [historicalData]);
+
+  // Load more historical data when needed
+  const loadMoreData = useCallback(async (direction: 'older' | 'newer') => {
+    if (isLoadingMore || allData.length === 0) return;
+    
+    setIsLoadingMore(true);
+    try {
+      const baseTimestamp = direction === 'older' 
+        ? allData[allData.length - 1]?.timestamp 
+        : allData[0]?.timestamp;
+        
+      if (!baseTimestamp) return;
+      
+      const response = await fetch(`/api/historical-data/${symbol}?timeframe=${timeframe}&limit=10000&${direction === 'older' ? 'before' : 'after'}=${baseTimestamp}`);
+      const newData = await response.json();
+      
+      if (newData && newData.length > 0) {
+        setAllData(prev => {
+          if (direction === 'older') {
+            return [...prev, ...newData];
+          } else {
+            return [...newData, ...prev];
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error loading more data:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [symbol, timeframe, allData, isLoadingMore]);
 
   if (isLoading) {
     return (
@@ -41,7 +81,7 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
     );
   }
 
-  if (!historicalData || historicalData.length === 0) {
+  if (!allData || allData.length === 0) {
     return (
       <div className="flex items-center justify-center h-96 bg-navy-800 rounded-lg">
         <div className="text-gray-400">No data available</div>
@@ -55,22 +95,22 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
     setZoomLevel(newZoom);
     setViewRange(prev => ({ 
       start: prev.start, 
-      end: Math.min(prev.start + newZoom, historicalData.length) 
+      end: Math.min(prev.start + newZoom, allData.length) 
     }));
   };
 
   const handleZoomOut = () => {
-    const newZoom = Math.min(historicalData.length, Math.floor(zoomLevel * 1.4));
+    const newZoom = Math.min(allData.length, Math.floor(zoomLevel * 1.4));
     setZoomLevel(newZoom);
     setViewRange(prev => ({ 
       start: prev.start, 
-      end: Math.min(prev.start + newZoom, historicalData.length) 
+      end: Math.min(prev.start + newZoom, allData.length) 
     }));
   };
 
   const handleReset = () => {
     setZoomLevel(250);
-    setViewRange({ start: 0, end: Math.min(250, historicalData.length) });
+    setViewRange({ start: 0, end: Math.min(250, allData.length) });
   };
 
   const handleZoomChange = (startIndex: number, endIndex: number) => {
@@ -80,30 +120,42 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
     setViewRange({ start: startIndex, end: endIndex });
   };
 
-  const handlePanLeft = () => {
+  const handlePanLeft = async () => {
     const step = Math.floor(zoomLevel * 0.2); // Move by 20% of current zoom
     const newStart = Math.max(0, viewRange.start - step);
+    
+    // Check if we need to load more older data
+    if (newStart < 100 && !isLoadingMore) {
+      await loadMoreData('older');
+    }
+    
     setViewRange({
       start: newStart,
-      end: Math.min(newStart + zoomLevel, historicalData.length)
+      end: Math.min(newStart + zoomLevel, allData.length)
     });
     setCurrentZoomStart(newStart);
   };
 
-  const handlePanRight = () => {
+  const handlePanRight = async () => {
     const step = Math.floor(zoomLevel * 0.2); // Move by 20% of current zoom
-    const newStart = Math.min(historicalData.length - zoomLevel, viewRange.start + step);
+    const newStart = Math.min(allData.length - zoomLevel, viewRange.start + step);
+    
+    // Check if we need to load more newer data  
+    if (newStart + zoomLevel > allData.length - 100 && !isLoadingMore) {
+      await loadMoreData('newer');
+    }
+    
     setViewRange({
       start: newStart,
-      end: Math.min(newStart + zoomLevel, historicalData.length)
+      end: Math.min(newStart + zoomLevel, allData.length)
     });
     setCurrentZoomStart(newStart);
   };
 
   // Get data for current view
-  const viewData = historicalData.slice(viewRange.start, viewRange.end);
-  const latestPrice = historicalData[0] ? parseFloat(historicalData[0].close) : 0;
-  const previousPrice = historicalData[1] ? parseFloat(historicalData[1].close) : 0;
+  const viewData = allData.slice(viewRange.start, viewRange.end);
+  const latestPrice = allData[0] ? parseFloat(allData[0].close) : 0;
+  const previousPrice = allData[1] ? parseFloat(allData[1].close) : 0;
   const priceChange = latestPrice - previousPrice;
   const priceChangePercent = previousPrice > 0 ? (priceChange / previousPrice) * 100 : 0;
 
@@ -112,25 +164,30 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <h3 className="text-white font-semibold text-lg">
-            {symbol} - {historicalData.length.toLocaleString()} candles loaded
+            {symbol} - {allData.length.toLocaleString()} candles loaded
           </h3>
           <div className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded">
             AUTHENTIC DATA
           </div>
+          {isLoadingMore && (
+            <div className="text-xs text-blue-400 bg-blue-400/10 px-2 py-1 rounded">
+              LOADING MORE...
+            </div>
+          )}
         </div>
         <div className="text-right text-sm text-gray-400">
-          <div>Latest: {historicalData[0]?.timestamp ? new Date(historicalData[0].timestamp).toLocaleString() : 'N/A'}</div>
-          <div>Records: {historicalData.length.toLocaleString()}</div>
+          <div>Latest: {allData[0]?.timestamp ? new Date(allData[0].timestamp).toLocaleString() : 'N/A'}</div>
+          <div>Records: {allData.length.toLocaleString()}</div>
         </div>
       </div>
 
       {/* Chart Controls */}
       <div className="flex items-center justify-between p-4 bg-navy-800 rounded-lg">
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={handlePanLeft} disabled={viewRange.start <= 0}>
+          <Button variant="outline" size="sm" onClick={handlePanLeft} disabled={isLoadingMore}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={handlePanRight} disabled={viewRange.end >= historicalData.length}>
+          <Button variant="outline" size="sm" onClick={handlePanRight} disabled={isLoadingMore}>
             <ChevronRight className="h-4 w-4" />
           </Button>
           <div className="h-4 w-px bg-gray-600 mx-2" />
@@ -145,7 +202,7 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
           </Button>
         </div>
         <div className="text-sm text-gray-400">
-          Showing {viewRange.start + 1}-{viewRange.end} of {historicalData.length} candles (Zoom: {zoomLevel})
+          Showing {viewRange.start + 1}-{viewRange.end} of {allData.length} candles (Zoom: {zoomLevel})
         </div>
       </div>
 

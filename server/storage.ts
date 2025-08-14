@@ -23,7 +23,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -54,7 +54,7 @@ export interface IStorage {
   updateTechnicalIndicators(indicators: InsertTechnicalIndicators): Promise<TechnicalIndicators>;
   
   // Historical Data
-  getHistoricalData(symbol: string, timeframe: string, limit?: number): Promise<HistoricalData[]>;
+  getHistoricalData(symbol: string, timeframe: string, limit?: number, offset?: number, before?: string, after?: string): Promise<HistoricalData[]>;
   createHistoricalData(data: InsertHistoricalData): Promise<HistoricalData>;
 }
 
@@ -532,14 +532,24 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getHistoricalData(symbol: string, timeframe: string, limit = 100, offset = 0): Promise<HistoricalData[]> {
+  async getHistoricalData(symbol: string, timeframe: string, limit = 100, offset = 0, before?: string, after?: string): Promise<HistoricalData[]> {
+    const conditions = [
+      eq(historicalData.symbol, symbol),
+      eq(historicalData.timeframe, timeframe)
+    ];
+    
+    // Add timestamp filtering for infinite scrolling
+    if (before) {
+      conditions.push(sql`${historicalData.timestamp} < ${before}`);
+    }
+    if (after) {
+      conditions.push(sql`${historicalData.timestamp} > ${after}`);
+    }
+    
     return await db
       .select()
       .from(historicalData)
-      .where(and(
-        eq(historicalData.symbol, symbol),
-        eq(historicalData.timeframe, timeframe)
-      ))
+      .where(and(...conditions))
       .orderBy(desc(historicalData.timestamp))
       .limit(limit)
       .offset(offset);
