@@ -121,39 +121,42 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
   };
 
   const handlePanLeft = async () => {
-    const step = Math.floor(zoomLevel * 0.2); // Move by 20% of current zoom
+    const step = Math.floor(zoomLevel * 0.3); // Move by 30% of current zoom  
     const newStart = Math.max(0, viewRange.start - step);
+    const newEnd = Math.min(newStart + zoomLevel, allData.length);
+    
+    console.log(`📈 Pan Left: ${viewRange.start}-${viewRange.end} -> ${newStart}-${newEnd}`);
     
     // Check if we need to load more older data
     if (newStart < 100 && !isLoadingMore) {
+      console.log('🔄 Loading older data during pan left');
       await loadMoreData('older');
     }
     
-    setViewRange({
-      start: newStart,
-      end: Math.min(newStart + zoomLevel, allData.length)
-    });
+    setViewRange({ start: newStart, end: newEnd });
     setCurrentZoomStart(newStart);
   };
 
   const handlePanRight = async () => {
-    const step = Math.floor(zoomLevel * 0.2); // Move by 20% of current zoom
+    const step = Math.floor(zoomLevel * 0.3); // Move by 30% of current zoom
     const newStart = Math.min(allData.length - zoomLevel, viewRange.start + step);
+    const newEnd = Math.min(newStart + zoomLevel, allData.length);
+    
+    console.log(`📈 Pan Right: ${viewRange.start}-${viewRange.end} -> ${newStart}-${newEnd}`);
     
     // Check if we need to load more newer data  
-    if (newStart + zoomLevel > allData.length - 100 && !isLoadingMore) {
+    if (newEnd > allData.length - 100 && !isLoadingMore) {
+      console.log('🔄 Loading newer data during pan right');
       await loadMoreData('newer');
     }
     
-    setViewRange({
-      start: newStart,
-      end: Math.min(newStart + zoomLevel, allData.length)
-    });
+    setViewRange({ start: newStart, end: newEnd });
     setCurrentZoomStart(newStart);
   };
 
-  // Get data for current view
+  // Get data for current view - ensure we always have valid data
   const viewData = allData.slice(viewRange.start, viewRange.end);
+  console.log(`📊 View: ${viewRange.start}-${viewRange.end} = ${viewData.length} candles (Total: ${allData.length})`);
   const latestPrice = allData[0] ? parseFloat(allData[0].close) : 0;
   const previousPrice = allData[1] ? parseFloat(allData[1].close) : 0;
   const priceChange = latestPrice - previousPrice;
