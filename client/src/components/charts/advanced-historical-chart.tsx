@@ -70,7 +70,7 @@ export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1
       setCurrentSymbol(symbol);
       setError(null);
     }
-  }, [symbol, currentSymbol]);
+  }, [symbol]);
 
   // Fetch ticker status
   const { data: tickerStatus } = useQuery<TickerStatus>({
