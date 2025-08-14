@@ -35,7 +35,7 @@ export const orders = pgTable("orders", {
 
 export const marketData = pgTable("market_data", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  symbol: text("symbol").notNull(),
+  symbol: text("symbol").notNull().unique(),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   change: decimal("change", { precision: 10, scale: 2 }).notNull(),
   changePercent: decimal("change_percent", { precision: 5, scale: 2 }).notNull(),
@@ -54,7 +54,7 @@ export const portfolio = pgTable("portfolio", {
 
 export const technicalIndicators = pgTable("technical_indicators", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  symbol: text("symbol").notNull(),
+  symbol: text("symbol").notNull().unique(),
   rsi: decimal("rsi", { precision: 5, scale: 2 }),
   macd: decimal("macd", { precision: 8, scale: 4 }),
   macdSignal: decimal("macd_signal", { precision: 8, scale: 4 }),

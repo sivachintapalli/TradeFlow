@@ -21,16 +21,18 @@ Preferred communication style: Simple, everyday language.
 
 - **Runtime**: Node.js with Express.js REST API
 - **Language**: TypeScript with ES modules
-- **Storage Layer**: In-memory storage implementation with interface for future database integration
+- **Storage Layer**: PostgreSQL database with Drizzle ORM (DatabaseStorage implementation)
+- **Database**: Neon PostgreSQL serverless database with WebSocket connections
 - **API Design**: RESTful endpoints for portfolio, positions, orders, and market data
 - **Development**: Hot-reload with Vite integration in development mode
 
 ## Data Management
 
-- **Database Schema**: Drizzle ORM with PostgreSQL schema definitions
-- **Tables**: Users, positions, orders, market data, portfolio, and technical indicators
-- **Query Layer**: Type-safe database operations with Drizzle
+- **Database Schema**: Drizzle ORM with PostgreSQL schema definitions (migrated from in-memory storage)
+- **Tables**: Users, positions, orders, market data, portfolio, technical indicators, and historical data
+- **Query Layer**: Type-safe database operations with Drizzle and Neon serverless PostgreSQL
 - **Data Validation**: Zod schemas for runtime type checking and API validation
+- **Migration Status**: Database schema successfully pushed on 2025-01-14, all tables created with proper constraints
 
 ## Component Architecture
 

@@ -12,9 +12,18 @@ import {
   type TechnicalIndicators,
   type InsertTechnicalIndicators,
   type HistoricalData,
-  type InsertHistoricalData
+  type InsertHistoricalData,
+  users,
+  positions,
+  orders,
+  marketData,
+  portfolio,
+  technicalIndicators,
+  historicalData
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -382,4 +391,164 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async getAllPositions(): Promise<Position[]> {
+    return await db.select().from(positions).orderBy(desc(positions.updatedAt));
+  }
+
+  async createPosition(insertPosition: InsertPosition): Promise<Position> {
+    const [position] = await db
+      .insert(positions)
+      .values(insertPosition)
+      .returning();
+    return position;
+  }
+
+  async updatePosition(id: string, updateData: Partial<InsertPosition>): Promise<Position | undefined> {
+    const [position] = await db
+      .update(positions)
+      .set(updateData)
+      .where(eq(positions.id, id))
+      .returning();
+    return position || undefined;
+  }
+
+  async getAllOrders(): Promise<Order[]> {
+    return await db.select().from(orders).orderBy(desc(orders.createdAt));
+  }
+
+  async createOrder(insertOrder: InsertOrder): Promise<Order> {
+    const [order] = await db
+      .insert(orders)
+      .values(insertOrder)
+      .returning();
+    return order;
+  }
+
+  async updateOrderStatus(id: string, status: string, filledAt?: Date): Promise<Order | undefined> {
+    const [order] = await db
+      .update(orders)
+      .set({ 
+        status, 
+        filledAt: filledAt || null 
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    return order || undefined;
+  }
+
+  async getMarketData(symbol: string): Promise<MarketData | undefined> {
+    const [data] = await db.select().from(marketData).where(eq(marketData.symbol, symbol));
+    return data || undefined;
+  }
+
+  async updateMarketData(data: InsertMarketData): Promise<MarketData> {
+    const [result] = await db
+      .insert(marketData)
+      .values(data)
+      .onConflictDoUpdate({
+        target: marketData.symbol,
+        set: {
+          price: data.price,
+          change: data.change,
+          changePercent: data.changePercent,
+          volume: data.volume,
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  async getPortfolio(): Promise<Portfolio | undefined> {
+    const [portfolioData] = await db.select().from(portfolio).limit(1);
+    return portfolioData || undefined;
+  }
+
+  async updatePortfolio(portfolioData: InsertPortfolio): Promise<Portfolio> {
+    // First try to get existing portfolio
+    const existing = await this.getPortfolio();
+    
+    if (existing) {
+      const [updated] = await db
+        .update(portfolio)
+        .set(portfolioData)
+        .where(eq(portfolio.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(portfolio)
+        .values(portfolioData)
+        .returning();
+      return created;
+    }
+  }
+
+  async getTechnicalIndicators(symbol: string): Promise<TechnicalIndicators | undefined> {
+    const [indicators] = await db.select().from(technicalIndicators).where(eq(technicalIndicators.symbol, symbol));
+    return indicators || undefined;
+  }
+
+  async updateTechnicalIndicators(indicators: InsertTechnicalIndicators): Promise<TechnicalIndicators> {
+    const [result] = await db
+      .insert(technicalIndicators)
+      .values(indicators)
+      .onConflictDoUpdate({
+        target: technicalIndicators.symbol,
+        set: {
+          rsi: indicators.rsi,
+          macd: indicators.macd,
+          macdSignal: indicators.macdSignal,
+          macdHistogram: indicators.macdHistogram,
+          bollingerUpper: indicators.bollingerUpper,
+          bollingerMiddle: indicators.bollingerMiddle,
+          bollingerLower: indicators.bollingerLower,
+          volume: indicators.volume,
+          avgVolume: indicators.avgVolume,
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  async getHistoricalData(symbol: string, timeframe: string, limit = 100, offset = 0): Promise<HistoricalData[]> {
+    return await db
+      .select()
+      .from(historicalData)
+      .where(and(
+        eq(historicalData.symbol, symbol),
+        eq(historicalData.timeframe, timeframe)
+      ))
+      .orderBy(desc(historicalData.timestamp))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async createHistoricalData(data: InsertHistoricalData): Promise<HistoricalData> {
+    const [result] = await db
+      .insert(historicalData)
+      .values(data)
+      .returning();
+    return result;
+  }
+}
+
+export const storage = new DatabaseStorage();
