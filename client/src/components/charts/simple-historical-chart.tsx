@@ -23,8 +23,8 @@ interface SimpleHistoricalChartProps {
 }
 
 export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M" }: SimpleHistoricalChartProps) {
-  const [viewRange, setViewRange] = useState({ start: 0, end: 100 }); // Show first 100 candles by default
-  const [zoomLevel, setZoomLevel] = useState(100); // Number of candles to show
+  const [viewRange, setViewRange] = useState({ start: 0, end: 250 }); // Show first 250 candles by default
+  const [zoomLevel, setZoomLevel] = useState(250); // Number of candles to show
   
   // Fetch initial 1 year of data
   const { data: historicalData = [], isLoading } = useQuery({
@@ -68,8 +68,8 @@ export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M"
   };
 
   const handleReset = () => {
-    setZoomLevel(100);
-    setViewRange({ start: 0, end: Math.min(100, historicalData.length) });
+    setZoomLevel(250);
+    setViewRange({ start: 0, end: Math.min(250, historicalData.length) });
   };
 
   const handlePanLeft = () => {

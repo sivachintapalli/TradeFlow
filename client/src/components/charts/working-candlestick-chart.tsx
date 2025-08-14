@@ -331,7 +331,7 @@ export default function WorkingCandlestickChart({
         {
           type: 'inside',
           xAxisIndex: [0, 1],
-          start: Math.max(0, 100 - (100 / data.length) * 100),
+          start: Math.max(0, 100 - (250 / data.length) * 100),
           end: 100,
           zoomOnMouseWheel: true,
           moveOnMouseMove: true,
@@ -342,7 +342,7 @@ export default function WorkingCandlestickChart({
           xAxisIndex: [0, 1],
           type: 'slider',
           top: '95%',
-          start: Math.max(0, 100 - (100 / data.length) * 100),
+          start: Math.max(0, 100 - (250 / data.length) * 100),
           end: 100,
           backgroundColor: 'rgba(47, 69, 84, 0.8)',
           borderColor: '#64748b',
