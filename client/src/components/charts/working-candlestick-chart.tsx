@@ -1,0 +1,265 @@
+import { useEffect, useRef } from "react";
+import * as echarts from "echarts";
+
+interface CandleData {
+  id: string;
+  symbol: string;
+  timestamp: string;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  volume: number;
+  timeframe: string;
+}
+
+interface WorkingCandlestickChartProps {
+  data: CandleData[];
+  symbol: string;
+  height?: string;
+}
+
+export default function WorkingCandlestickChart({ 
+  data, 
+  symbol, 
+  height = "400px" 
+}: WorkingCandlestickChartProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const chartInstance = useRef<echarts.ECharts | null>(null);
+
+  useEffect(() => {
+    if (!chartRef.current || !data || data.length === 0) return;
+
+    // Initialize chart
+    if (!chartInstance.current) {
+      chartInstance.current = echarts.init(chartRef.current, 'dark');
+    }
+
+    // Prepare data for ECharts
+    const sortedData = [...data].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    const xAxisData = sortedData.map(item => 
+      new Date(item.timestamp).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      })
+    );
+
+    const candlestickData = sortedData.map(item => [
+      parseFloat(item.open),
+      parseFloat(item.close),
+      parseFloat(item.low),
+      parseFloat(item.high)
+    ]);
+
+    const volumeData = sortedData.map(item => item.volume);
+
+    const option = {
+      backgroundColor: 'transparent',
+      title: {
+        text: `${symbol} Candlestick Chart`,
+        left: 'center',
+        textStyle: {
+          color: '#ffffff',
+          fontSize: 16
+        }
+      },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+          type: 'cross'
+        },
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        borderColor: '#334155',
+        textStyle: {
+          color: '#ffffff'
+        },
+        formatter: function(params: any) {
+          const dataIndex = params[0].dataIndex;
+          const item = sortedData[dataIndex];
+          if (!item) return '';
+          
+          return `
+            <div style="padding: 8px;">
+              <div style="font-weight: bold; margin-bottom: 4px;">${new Date(item.timestamp).toLocaleString()}</div>
+              <div>Open: $${parseFloat(item.open).toFixed(2)}</div>
+              <div>High: $${parseFloat(item.high).toFixed(2)}</div>
+              <div>Low: $${parseFloat(item.low).toFixed(2)}</div>
+              <div>Close: $${parseFloat(item.close).toFixed(2)}</div>
+              <div>Volume: ${item.volume.toLocaleString()}</div>
+            </div>
+          `;
+        }
+      },
+      grid: [
+        {
+          left: '3%',
+          right: '3%',
+          top: '10%',
+          height: '65%'
+        },
+        {
+          left: '3%',
+          right: '3%',
+          top: '80%',
+          height: '15%'
+        }
+      ],
+      xAxis: [
+        {
+          type: 'category',
+          data: xAxisData,
+          axisLine: {
+            lineStyle: {
+              color: '#64748b'
+            }
+          },
+          axisLabel: {
+            color: '#94a3b8',
+            interval: Math.floor(xAxisData.length / 10)
+          }
+        },
+        {
+          type: 'category',
+          gridIndex: 1,
+          data: xAxisData,
+          axisLine: {
+            lineStyle: {
+              color: '#64748b'
+            }
+          },
+          axisLabel: {
+            show: false
+          }
+        }
+      ],
+      yAxis: [
+        {
+          scale: true,
+          axisLine: {
+            lineStyle: {
+              color: '#64748b'
+            }
+          },
+          axisLabel: {
+            color: '#94a3b8',
+            formatter: '${value}'
+          },
+          splitLine: {
+            lineStyle: {
+              color: '#334155',
+              type: 'dashed'
+            }
+          }
+        },
+        {
+          scale: true,
+          gridIndex: 1,
+          axisLine: {
+            lineStyle: {
+              color: '#64748b'
+            }
+          },
+          axisLabel: {
+            color: '#94a3b8'
+          },
+          splitLine: {
+            show: false
+          }
+        }
+      ],
+      series: [
+        {
+          name: 'Candlestick',
+          type: 'candlestick',
+          data: candlestickData,
+          itemStyle: {
+            color: '#10b981', // Green for bullish
+            color0: '#ef4444', // Red for bearish
+            borderColor: '#10b981',
+            borderColor0: '#ef4444'
+          },
+          emphasis: {
+            itemStyle: {
+              color: '#34d399',
+              color0: '#f87171',
+              borderColor: '#34d399',
+              borderColor0: '#f87171'
+            }
+          }
+        },
+        {
+          name: 'Volume',
+          type: 'bar',
+          xAxisIndex: 1,
+          yAxisIndex: 1,
+          data: volumeData,
+          itemStyle: {
+            color: 'rgba(59, 130, 246, 0.6)'
+          }
+        }
+      ],
+      dataZoom: [
+        {
+          type: 'inside',
+          xAxisIndex: [0, 1],
+          start: Math.max(0, 100 - (100 / data.length) * 100),
+          end: 100
+        },
+        {
+          show: true,
+          xAxisIndex: [0, 1],
+          type: 'slider',
+          top: '95%',
+          start: Math.max(0, 100 - (100 / data.length) * 100),
+          end: 100,
+          backgroundColor: 'rgba(47, 69, 84, 0.8)',
+          borderColor: '#64748b',
+          fillerColor: 'rgba(59, 130, 246, 0.3)',
+          handleStyle: {
+            color: '#3b82f6'
+          },
+          textStyle: {
+            color: '#94a3b8'
+          }
+        }
+      ]
+    };
+
+    chartInstance.current.setOption(option);
+
+    // Handle resize
+    const handleResize = () => {
+      if (chartInstance.current) {
+        chartInstance.current.resize();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+
+  }, [data, symbol]);
+
+  useEffect(() => {
+    return () => {
+      if (chartInstance.current) {
+        chartInstance.current.dispose();
+        chartInstance.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <div 
+      ref={chartRef} 
+      style={{ width: '100%', height }}
+      className="bg-navy-900 rounded-lg"
+    />
+  );
+}

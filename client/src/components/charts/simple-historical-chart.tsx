@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
+import WorkingCandlestickChart from "@/components/charts/working-candlestick-chart";
 
 interface HistoricalDataPoint {
   id: string;
@@ -137,64 +138,67 @@ export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M"
         </div>
       </div>
 
-      {/* Chart Display */}
-      <div className="h-96 w-full bg-navy-800 rounded-lg p-6">
-        <div className="h-full flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-white text-xl font-bold">{symbol} Chart</h4>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-white">${latestPrice.toFixed(2)}</div>
-              <div className={`text-sm ${priceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)} ({priceChangePercent >= 0 ? '+' : ''}{priceChangePercent.toFixed(2)}%)
-              </div>
+      {/* Actual Candlestick Chart */}
+      <div className="bg-navy-800 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-white text-xl font-bold">{symbol} Chart</h4>
+          <div className="text-right">
+            <div className="text-2xl font-bold text-white">${latestPrice.toFixed(2)}</div>
+            <div className={`text-sm ${priceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)} ({priceChangePercent >= 0 ? '+' : ''}{priceChangePercent.toFixed(2)}%)
             </div>
           </div>
-          
-          <div className="flex-1 bg-navy-900 rounded-lg p-4">
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="text-sm">
-                <span className="text-gray-400">Open: </span>
-                <span className="text-white">${historicalData[0] ? parseFloat(historicalData[0].open).toFixed(2) : 'N/A'}</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-gray-400">High: </span>
-                <span className="text-white">${historicalData[0] ? parseFloat(historicalData[0].high).toFixed(2) : 'N/A'}</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-gray-400">Low: </span>
-                <span className="text-white">${historicalData[0] ? parseFloat(historicalData[0].low).toFixed(2) : 'N/A'}</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-gray-400">Volume: </span>
-                <span className="text-white">{historicalData[0] ? historicalData[0].volume.toLocaleString() : 'N/A'}</span>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <h5 className="text-gray-400 text-sm font-medium">
-                Current View Data ({viewData.length} candles):
-              </h5>
-              <div className="space-y-1 max-h-48 overflow-y-auto">
-                {recentData.map((candle, index) => {
-                  const candleIndex = viewRange.start + index;
-                  return (
-                    <div key={candle.id} className="flex justify-between text-xs">
-                      <span className="text-gray-400">#{candleIndex} {new Date(candle.timestamp).toLocaleTimeString()}</span>
-                      <span className="text-white">${parseFloat(candle.close).toFixed(2)}</span>
-                      <span className="text-gray-400">{candle.volume.toLocaleString()}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              
-              {/* Navigation info */}
-              <div className="mt-4 pt-2 border-t border-gray-700">
-                <div className="text-xs text-gray-500">
-                  <div>Pan: Use arrow buttons to navigate through history</div>
-                  <div>Zoom: + to see fewer candles in detail, - to see more candles</div>
-                  <div>Reset: Return to default 100-candle view</div>
+        </div>
+        
+        <WorkingCandlestickChart 
+          data={viewData}
+          symbol={symbol}
+          height="400px"
+        />
+      </div>
+
+      {/* Data Summary */}
+      <div className="bg-navy-800 rounded-lg p-4">
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="text-sm">
+            <span className="text-gray-400">Open: </span>
+            <span className="text-white">${historicalData[0] ? parseFloat(historicalData[0].open).toFixed(2) : 'N/A'}</span>
+          </div>
+          <div className="text-sm">
+            <span className="text-gray-400">High: </span>
+            <span className="text-white">${historicalData[0] ? parseFloat(historicalData[0].high).toFixed(2) : 'N/A'}</span>
+          </div>
+          <div className="text-sm">
+            <span className="text-gray-400">Low: </span>
+            <span className="text-white">${historicalData[0] ? parseFloat(historicalData[0].low).toFixed(2) : 'N/A'}</span>
+          </div>
+          <div className="text-sm">
+            <span className="text-gray-400">Volume: </span>
+            <span className="text-white">{historicalData[0] ? historicalData[0].volume.toLocaleString() : 'N/A'}</span>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <h5 className="text-gray-400 text-sm font-medium">
+            Current View Data ({viewData.length} candles):
+          </h5>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {recentData.slice(0, 5).map((candle, index) => {
+              const candleIndex = viewRange.start + index;
+              return (
+                <div key={candle.id} className="flex justify-between text-xs">
+                  <span className="text-gray-400">#{candleIndex} {new Date(candle.timestamp).toLocaleTimeString()}</span>
+                  <span className="text-white">${parseFloat(candle.close).toFixed(2)}</span>
+                  <span className="text-gray-400">{candle.volume.toLocaleString()}</span>
                 </div>
-              </div>
+              );
+            })}
+          </div>
+          
+          {/* Navigation info */}
+          <div className="mt-2 pt-2 border-t border-gray-700">
+            <div className="text-xs text-gray-500">
+              <div>Pan: Use arrow buttons to navigate • Zoom: +/- buttons • Reset: Return to 100-candle view</div>
             </div>
           </div>
         </div>
