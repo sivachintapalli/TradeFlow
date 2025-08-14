@@ -338,26 +338,10 @@ export default function WorkingCandlestickChart({
           start: Math.max(0, 100 - (250 / data.length) * 100),
           end: 100,
           zoomOnMouseWheel: true,
-          moveOnMouseMove: false,
+          moveOnMouseMove: true,
           moveOnMouseWheel: true,
-          preventDefaultMouseMove: false
-        },
-        {
-          show: true,
-          xAxisIndex: [0, 1],
-          type: 'slider',
-          top: '95%',
-          start: Math.max(0, 100 - (250 / data.length) * 100),
-          end: 100,
-          backgroundColor: 'rgba(47, 69, 84, 0.8)',
-          borderColor: '#64748b',
-          fillerColor: 'rgba(59, 130, 246, 0.3)',
-          handleStyle: {
-            color: '#3b82f6'
-          },
-          textStyle: {
-            color: '#94a3b8'
-          }
+          preventDefaultMouseMove: false,
+          throttle: 50
         }
       ],
       brush: {
@@ -368,7 +352,7 @@ export default function WorkingCandlestickChart({
 
     chartInstance.current.setOption(option);
 
-    // Handle dataZoom events for zoom change and infinite scrolling
+    // Handle dataZoom events for TradingView-style interactions
     chartInstance.current.off('dataZoom');
     chartInstance.current.on('dataZoom', (params: any) => {
       if (params.batch && params.batch[0]) {
@@ -381,19 +365,17 @@ export default function WorkingCandlestickChart({
           onZoomChange(startIndex, endIndex);
         }
         
-        // Check for infinite scroll triggers
+        // TradingView-style infinite scroll - only trigger when actually at edges
         if (onDataRangeChange) {
-          const totalDataLength = data.length;
-          
-          // If user has scrolled near the beginning (older data), load more older data
-          if (startIndex < 50) {
-            console.log('🔄 Triggering infinite scroll - loading older data');
+          // Load older data when scrolled to beginning
+          if (start <= 5) {
+            console.log('🔄 TradingView scroll - loading older data');
             onDataRangeChange('older');
           }
           
-          // If user has scrolled near the end (newer data), load more newer data  
-          if (endIndex > totalDataLength - 50) {
-            console.log('🔄 Triggering infinite scroll - loading newer data');
+          // Load newer data when scrolled to end
+          if (end >= 95) {
+            console.log('🔄 TradingView scroll - loading newer data');
             onDataRangeChange('newer');
           }
         }

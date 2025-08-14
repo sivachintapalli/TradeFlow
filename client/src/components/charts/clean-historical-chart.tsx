@@ -189,29 +189,20 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
         </div>
       </div>
 
-      {/* Chart Controls */}
-      <div className="flex items-center justify-between p-4 bg-navy-800 rounded-lg">
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={handlePanLeft} disabled={isLoadingMore}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={handlePanRight} disabled={isLoadingMore}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <div className="h-4 w-px bg-gray-600 mx-2" />
-          <Button variant="outline" size="sm" onClick={handleZoomIn}>
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleZoomOut}>
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleReset}>
-            <RotateCcw className="h-4 w-4" />
-          </Button>
+      {/* Simplified Controls - TradingView Style */}
+      <div className="flex items-center justify-between p-3 bg-navy-800 rounded-lg">
+        <div className="flex items-center space-x-3 text-sm text-gray-400">
+          <span>Mouse: Drag to pan • Wheel to zoom</span>
+          <div className="h-4 w-px bg-gray-600" />
+          <span>Data: {allData.length.toLocaleString()} candles</span>
+          {isLoadingMore && (
+            <span className="text-blue-400 animate-pulse">Loading more...</span>
+          )}
         </div>
-        <div className="text-sm text-gray-400">
-          Showing {viewRange.start + 1}-{viewRange.end} of {allData.length} candles (Zoom: {zoomLevel})
-        </div>
+        <Button variant="outline" size="sm" onClick={handleReset} className="text-xs">
+          <RotateCcw className="h-3 w-3 mr-1" />
+          Reset View
+        </Button>
       </div>
 
       {/* Actual Candlestick Chart */}
