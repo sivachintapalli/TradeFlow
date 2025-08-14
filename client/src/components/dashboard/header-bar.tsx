@@ -3,7 +3,11 @@ import { Button } from "@/components/ui/button";
 import { useMarketData, useEmergencyStop } from "@/hooks/use-trading-data";
 import { useToast } from "@/hooks/use-toast";
 
-export default function HeaderBar() {
+interface HeaderBarProps {
+  showEmergencyStop?: boolean;
+}
+
+export default function HeaderBar({ showEmergencyStop = false }: HeaderBarProps) {
   const { data: spyData, isLoading: spyLoading } = useMarketData("SPY");
   const emergencyStop = useEmergencyStop();
   const { toast } = useToast();
@@ -87,16 +91,18 @@ export default function HeaderBar() {
             </div>
           </div>
           
-          {/* Emergency Stop */}
-          <Button
-            onClick={handleEmergencyStop}
-            disabled={emergencyStop.isPending}
-            className="bg-red-bearish hover:bg-red-600 px-4 py-2 rounded-lg font-semibold transition-all duration-200 glow-red flex items-center space-x-2"
-            data-testid="button-emergency-stop"
-          >
-            <StopCircle className="w-4 h-4" />
-            <span>EMERGENCY STOP</span>
-          </Button>
+          {/* Emergency Stop - Only show in Real-Time Trading */}
+          {showEmergencyStop && (
+            <Button
+              onClick={handleEmergencyStop}
+              disabled={emergencyStop.isPending}
+              className="bg-red-bearish hover:bg-red-600 px-4 py-2 rounded-lg font-semibold transition-all duration-200 glow-red flex items-center space-x-2"
+              data-testid="button-emergency-stop"
+            >
+              <StopCircle className="w-4 h-4" />
+              <span>EMERGENCY STOP</span>
+            </Button>
+          )}
         </div>
       </div>
     </header>

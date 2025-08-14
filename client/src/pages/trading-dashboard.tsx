@@ -10,7 +10,7 @@ export default function TradingDashboard() {
 
   return (
     <div className="min-h-screen bg-navy-900 text-white font-inter">
-      <HeaderBar />
+      <HeaderBar showEmergencyStop={activeMode === TRADING_MODES.REALTIME} />
       
       <main className="flex-1 p-6">
         <TabNavigation 
