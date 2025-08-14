@@ -56,8 +56,8 @@ export class PolygonService {
    * Get the most recent trading day close time
    */
   getMostRecentMarketClose(): Date {
-    // Force current date to 2025
-    const now = new Date('2025-08-14T12:00:00Z'); // Use current actual date
+    // Use actual current date
+    const now = new Date();
     const et = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
     const day = et.getDay();
     const hour = et.getHours();
