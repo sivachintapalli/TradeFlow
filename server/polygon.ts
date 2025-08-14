@@ -84,18 +84,20 @@ export class PolygonService {
         const result = data.results[0];
         const currentPrice = result.c; // close price
         
-        // Get previous close using Polygon's prev endpoint
+        // For proper daily change calculation, get the previous trading day's close
+        // During market hours, this should be compared to the current real-time price
         let previousClose = result.o; // fallback to open
         
         try {
-          const prevCloseUrl = `${this.baseUrl}/v2/aggs/ticker/${symbol}/prev?adjusted=true&apikey=${this.apiKey}`;
-          const prevResponse = await fetch(prevCloseUrl);
+          // Get 2-day range to ensure we have proper previous close
+          const twoDayUrl = `${this.baseUrl}/v2/aggs/ticker/${symbol}/range/1/day/${this.getPreviousBusinessDay()}/${this.getPreviousBusinessDay()}?adjusted=true&apikey=${this.apiKey}`;
+          const prevResponse = await fetch(twoDayUrl);
           
           if (prevResponse.ok) {
             const prevData = await prevResponse.json();
             if (prevData.status === 'OK' && prevData.results && prevData.results.length > 0) {
               previousClose = prevData.results[0].c;
-              console.log(`📊 [PREV CLOSE] Retrieved previous close for ${symbol}: $${previousClose.toFixed(2)}`);
+              console.log(`📊 [PREV CLOSE] Retrieved previous trading day close for ${symbol}: $${previousClose.toFixed(2)}`);
             }
           }
         } catch (e) {
@@ -106,8 +108,8 @@ export class PolygonService {
         const change = currentPrice - previousClose;
         const changePercent = ((change / previousClose) * 100);
         
-        console.log(`Fresh Polygon data for ${symbol}: $${currentPrice} (${change >= 0 ? '+' : ''}${change.toFixed(2)}, ${changePercent.toFixed(2)}%)`);
-        console.log(`Previous close: $${previousClose.toFixed(2)}, Current: $${currentPrice.toFixed(2)}`);
+        console.log(`Fresh Polygon data for ${symbol}: $${currentPrice.toFixed(2)} (${change >= 0 ? '+' : ''}${change.toFixed(2)}, ${changePercent.toFixed(2)}%)`);
+        console.log(`📊 [CALC] Previous: $${previousClose.toFixed(2)}, Current: $${currentPrice.toFixed(2)}, Change: ${change >= 0 ? '+' : ''}$${change.toFixed(2)}`);
         
         return {
           id: `live-${symbol}`,
