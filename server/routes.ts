@@ -87,7 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      res.json(marketData);
+      // This line should be removed as it's unreachable
     } catch (error) {
       console.error('Market data fetch error:', error);
       res.status(500).json({ message: "Failed to fetch market data" });
