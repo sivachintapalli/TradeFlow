@@ -142,8 +142,13 @@ export default function CandlestickChart({
 
     console.log('[CandlestickChart] Processing', data.length, 'data points for', symbol);
 
+    // Sort data chronologically (oldest to newest) for proper chart display
+    const sortedData = [...data].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
     // Process data for ECharts candlestick format: [timestamp, open, close, low, high]
-    const processedData = data.map((item, index) => {
+    const processedData = sortedData.map((item, index) => {
       const timestamp = new Date(item.timestamp).getTime();
       const open = parseFloat(item.open);
       const close = parseFloat(item.close);
@@ -172,13 +177,13 @@ export default function CandlestickChart({
       return result;
     });
 
-    const dates = data.map(item => new Date(item.timestamp).toLocaleDateString());
-    const volumeData = data.map(item => parseFloat(item.volume.toString()));
+    const dates = sortedData.map(item => new Date(item.timestamp).toLocaleDateString());
+    const volumeData = sortedData.map(item => parseFloat(item.volume.toString()));
 
     console.log('[CandlestickChart] Processed arrays - Candles:', processedData.length, 'Volume:', volumeData.length);
 
     // Generate market session dividers (pre-market, regular hours, after-hours)
-    const marketSessions = generateMarketSessions(data);
+    const marketSessions = generateMarketSessions(sortedData);
     
     const option = {
       backgroundColor: 'transparent',
@@ -376,7 +381,7 @@ export default function CandlestickChart({
         {
           type: 'inside',
           xAxisIndex: [0, 1],
-          start: isHistorical ? 70 : 90,
+          start: 95, // Show only last 5% (most recent ~500-1000 bars) for readability
           end: 100,
           zoomLock: false,
           moveOnMouseMove: true,
@@ -388,7 +393,7 @@ export default function CandlestickChart({
           xAxisIndex: [0, 1],
           type: 'slider',
           bottom: '5%',
-          start: isHistorical ? 70 : 90,
+          start: 95, // Default to most recent data
           end: 100,
           backgroundColor: 'rgba(30, 41, 59, 0.8)',
           dataBackground: {
