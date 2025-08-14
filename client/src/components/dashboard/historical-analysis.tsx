@@ -1,5 +1,5 @@
 import { useState } from "react";
-import AdvancedHistoricalChart from "@/components/charts/advanced-historical-chart";
+import SimpleHistoricalChart from "@/components/charts/simple-historical-chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -194,7 +194,7 @@ export default function HistoricalAnalysis() {
 
       {/* Chart */}
       {!isDownloading ? (
-        <AdvancedHistoricalChart 
+        <SimpleHistoricalChart 
           key={`${symbol}-${timeframe}-${period}`}  
           symbol={symbol}
           timeframe={timeframe}

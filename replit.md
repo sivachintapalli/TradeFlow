@@ -121,3 +121,7 @@ Technology Stack: Prefers TypeScript/Node.js over Python for this full-stack pro
 - ✅ **CHART SCALING**: Removed 500-bar limit, now loads 100K+ data points with infinite scroll
 - ✅ TradingView-style features: market session backgrounds, day dividers, zoom/pan controls
 - ✅ Fixed timeframe display: "1M" now shows as "1m" to avoid confusion with millions
+- ✅ **DATABASE INTEGRITY**: Added unique constraint (symbol, timestamp, timeframe) to prevent duplicates
+- ✅ **INFINITE LOOP FIX**: Replaced problematic AdvancedHistoricalChart with stable SimpleHistoricalChart
+- ✅ **DUPLICATE ANALYSIS**: Verified 600K+ records with zero duplicates using correct 3-column check
+- ✅ Dynamic candle counter shows actual loaded data instead of static text
