@@ -286,6 +286,9 @@ export class MemStorage implements IStorage {
       price: insertOrder.price || null,
       stopPrice: insertOrder.stopPrice || null,
       status: "pending",
+      timeInForce: insertOrder.timeInForce || null,
+      alpacaOrderId: insertOrder.alpacaOrderId || null,
+      filledQuantity: insertOrder.filledQuantity || null,
       createdAt: new Date(),
       filledAt: null,
     };

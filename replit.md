@@ -6,6 +6,8 @@ A professional algorithmic trading dashboard built with React, Express, and Type
 
 Preferred communication style: Simple, everyday language.
 Data integrity: Never use mock data - only authentic market data from real sources.
+UI Design: Modern blue/cyan theme instead of purple - professional financial aesthetic.
+Technology Stack: Prefers TypeScript/Node.js over Python for this full-stack project.
 
 # System Architecture
 
