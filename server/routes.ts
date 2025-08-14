@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertOrderSchema, insertMarketDataSchema, insertTechnicalIndicatorsSchema, insertHistoricalDataSchema } from "@shared/schema";
 import { polygonService } from "./polygon";
+import { alpacaService } from "./alpaca";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -254,23 +255,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Emergency stop endpoint
+  // Alpaca Trading API endpoints
+  app.get("/api/alpaca/account", async (req, res) => {
+    try {
+      const account = await alpacaService.getAccount();
+      res.json(account);
+    } catch (error: any) {
+      console.error('Alpaca account error:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch account info" });
+    }
+  });
+
+  app.get("/api/alpaca/positions", async (req, res) => {
+    try {
+      const positions = await alpacaService.getPositions();
+      res.json(positions);
+    } catch (error: any) {
+      console.error('Alpaca positions error:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch positions" });
+    }
+  });
+
+  app.get("/api/alpaca/orders", async (req, res) => {
+    try {
+      const { status, limit } = req.query;
+      const orders = await alpacaService.getOrders(
+        status as string, 
+        limit ? parseInt(limit as string) : 100
+      );
+      res.json(orders);
+    } catch (error: any) {
+      console.error('Alpaca orders error:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch orders" });
+    }
+  });
+
+  app.post("/api/alpaca/orders", async (req, res) => {
+    try {
+      const { symbol, qty, side, type, time_in_force, limit_price, stop_price, extended_hours } = req.body;
+      
+      if (!symbol || !qty || !side || !type) {
+        return res.status(400).json({ message: "Missing required fields: symbol, qty, side, type" });
+      }
+
+      const order = await alpacaService.submitOrder({
+        symbol,
+        qty: parseInt(qty),
+        side,
+        type,
+        time_in_force: time_in_force || 'day',
+        limit_price: limit_price ? parseFloat(limit_price) : undefined,
+        stop_price: stop_price ? parseFloat(stop_price) : undefined,
+        extended_hours: extended_hours || false,
+      });
+
+      res.json(order);
+    } catch (error: any) {
+      console.error('Alpaca order submission error:', error);
+      res.status(500).json({ message: error.message || "Failed to submit order" });
+    }
+  });
+
+  app.delete("/api/alpaca/orders/:orderId", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      await alpacaService.cancelOrder(orderId);
+      res.json({ message: "Order cancelled successfully" });
+    } catch (error: any) {
+      console.error('Alpaca cancel order error:', error);
+      res.status(500).json({ message: error.message || "Failed to cancel order" });
+    }
+  });
+
+  app.delete("/api/alpaca/orders", async (req, res) => {
+    try {
+      await alpacaService.cancelAllOrders();
+      res.json({ message: "All orders cancelled successfully" });
+    } catch (error: any) {
+      console.error('Alpaca cancel all orders error:', error);
+      res.status(500).json({ message: error.message || "Failed to cancel all orders" });
+    }
+  });
+
+  app.get("/api/alpaca/market-status", async (req, res) => {
+    try {
+      const isOpen = await alpacaService.isMarketOpen();
+      res.json({ isOpen });
+    } catch (error: any) {
+      console.error('Alpaca market status error:', error);
+      res.status(500).json({ message: error.message || "Failed to check market status" });
+    }
+  });
+
+  app.post("/api/alpaca/sync", async (req, res) => {
+    try {
+      await Promise.all([
+        alpacaService.syncPositions(),
+        alpacaService.syncOrders()
+      ]);
+      res.json({ message: "Data synchronized with Alpaca successfully" });
+    } catch (error: any) {
+      console.error('Alpaca sync error:', error);
+      res.status(500).json({ message: error.message || "Failed to sync with Alpaca" });
+    }
+  });
+
+  // Emergency stop endpoint - now uses Alpaca
   app.post("/api/emergency-stop", async (req, res) => {
     try {
-      // Cancel all pending orders
-      const orders = await storage.getAllOrders();
-      const pendingOrders = orders.filter(order => order.status === "pending");
-      
-      for (const order of pendingOrders) {
-        await storage.updateOrderStatus(order.id, "cancelled");
-      }
-      
+      await alpacaService.cancelAllOrders();
       res.json({ 
-        message: "Emergency stop executed", 
-        cancelledOrders: pendingOrders.length 
+        message: "Emergency stop executed - all orders cancelled via Alpaca" 
       });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to execute emergency stop" });
+    } catch (error: any) {
+      console.error('Emergency stop error:', error);
+      res.status(500).json({ message: error.message || "Failed to execute emergency stop" });
     }
   });
 

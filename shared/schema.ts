@@ -28,7 +28,10 @@ export const orders = pgTable("orders", {
   quantity: integer("quantity").notNull(),
   price: decimal("price", { precision: 10, scale: 2 }),
   stopPrice: decimal("stop_price", { precision: 10, scale: 2 }),
-  status: text("status").notNull().default("pending"), // 'pending', 'filled', 'cancelled'
+  status: text("status").notNull().default("pending"), // 'pending', 'filled', 'cancelled', 'rejected'
+  timeInForce: text("time_in_force").default("day"), // 'day', 'gtc', 'ioc', 'fok'
+  alpacaOrderId: text("alpaca_order_id").unique(),
+  filledQuantity: integer("filled_quantity").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   filledAt: timestamp("filled_at"),
 });

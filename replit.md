@@ -76,7 +76,18 @@ Data integrity: Never use mock data - only authentic market data from real sourc
 ## Financial Data Integration
 
 - **Polygon.io API**: Integrated for authentic real-time and historical market data
+- **Alpaca Markets API**: Paper trading execution and portfolio management  
 - **Data Integrity Policy**: System exclusively uses real market data - no mock, placeholder, or synthetic data
 - **Historical Data**: Downloaded on-demand from Polygon API with progress tracking
 - **Market Data Sync**: Automatic synchronization of existing tickers with latest market data
+- **Trading Execution**: Real paper trades executed through Alpaca's API with order tracking
 - **Error Handling**: Clear messaging when authentic data unavailable, never falls back to mock data
+
+## Trading Infrastructure
+
+- **Paper Trading**: All orders executed via Alpaca Paper Trading API
+- **Account Management**: Real-time account balance and buying power monitoring
+- **Position Tracking**: Live portfolio positions with P&L calculations
+- **Order Management**: Complete order lifecycle with real-time status updates  
+- **Market Hours**: Integration with Alpaca's market calendar and trading hours
+- **Emergency Stop**: Immediate cancellation of all orders through Alpaca API

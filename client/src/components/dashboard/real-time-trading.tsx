@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import OrderEntry from "./order-entry";
+import OrderEntryPanel from "@/components/trading/order-entry-panel";
+import PositionsPanel from "@/components/trading/positions-panel";
+import OrdersPanel from "@/components/trading/orders-panel";
 import ChartPanel from "./chart-panel";
-import PortfolioPanel from "./portfolio-panel";
 import { useMarketData } from "@/hooks/use-trading-data";
 
 const timeframes = ['1M', '5M', '15M'];
@@ -24,12 +25,12 @@ export default function RealTimeTrading() {
     <div className="space-y-6" data-testid="real-time-trading">
       <div className="grid grid-cols-12 gap-6">
         {/* Order Entry Panel */}
-        <div className="col-span-3">
-          <OrderEntry symbol={symbol} onSymbolChange={setSymbol} />
+        <div className="col-span-4">
+          <OrderEntryPanel />
         </div>
         
         {/* Live Trading Chart */}
-        <div className="col-span-6">
+        <div className="col-span-5">
           <div className="chart-container rounded-xl p-6 h-96">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-4">
@@ -85,9 +86,10 @@ export default function RealTimeTrading() {
           </div>
         </div>
         
-        {/* Portfolio and Order Book */}
-        <div className="col-span-3">
-          <PortfolioPanel />
+        {/* Positions and Orders */}
+        <div className="col-span-3 space-y-6">
+          <PositionsPanel />
+          <OrdersPanel />
         </div>
       </div>
     </div>
