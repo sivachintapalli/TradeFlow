@@ -316,37 +316,63 @@ export class PolygonService {
     multiplier: number = 1,
     from: string,
     to: string,
-    limit: number = 5000
+    limit: number = 50000
   ): Promise<PolygonCandle[]> {
-    const url = `${this.baseUrl}/v2/aggs/ticker/${symbol}/range/${multiplier}/${timespan}/${from}/${to}?adjusted=true&sort=asc&limit=${limit}&apikey=${this.apiKey}`;
+    let allResults: PolygonCandle[] = [];
+    let nextUrl: string | null = null;
+    
+    const initialUrl = `${this.baseUrl}/v2/aggs/ticker/${symbol}/range/${multiplier}/${timespan}/${from}/${to}?adjusted=true&sort=asc&limit=${limit}&apikey=${this.apiKey}`;
     
     try {
-      const response = await fetch(url);
+      let currentUrl = initialUrl;
+      let requestCount = 0;
+      const maxRequests = 50; // Safety limit for unlimited plan
       
-      if (!response.ok) {
-        throw new Error(`Polygon API error: ${response.status} ${response.statusText}`);
-      }
+      do {
+        requestCount++;
+        console.log(`📡 [API CALL ${requestCount}] Fetching ${symbol} ${timespan} data from Polygon...`);
+        
+        const response = await fetch(currentUrl);
+        
+        if (!response.ok) {
+          throw new Error(`Polygon API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data: PolygonResponse = await response.json();
+        
+        // Handle different API statuses
+        if (data.status === 'ERROR') {
+          throw new Error(`Polygon API error: ${data.error || 'Unknown error'}`);
+        }
+        
+        if (data.status === 'DELAYED') {
+          console.log(`⏳ [DELAYED] Delayed data returned for ${symbol}, continuing with available data`);
+        }
+        
+        if (data.results && data.results.length > 0) {
+          allResults.push(...data.results);
+          console.log(`📈 [BATCH ${requestCount}] Retrieved ${data.results.length} records (Total: ${allResults.length})`);
+        } else {
+          console.log(`📭 [EMPTY] No data in batch ${requestCount} for ${symbol}`);
+        }
+        
+        // Check for pagination with unlimited plan
+        nextUrl = data.next_url || null;
+        if (nextUrl) {
+          currentUrl = `${nextUrl}&apikey=${this.apiKey}`;
+          console.log(`🔄 [PAGINATION] More data available, fetching next batch...`);
+          
+          // Small delay to be respectful to API
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+      } while (nextUrl && requestCount < maxRequests);
       
-      const data: PolygonResponse = await response.json();
+      console.log(`✅ [COMPLETE] Total records retrieved for ${symbol} ${timespan}: ${allResults.length}`);
+      return allResults;
       
-      // Handle different API statuses
-      if (!data.results) {
-        console.warn(`No data returned for ${symbol} from ${from} to ${to}`);
-        return [];
-      }
-      
-      if (data.status === 'DELAYED') {
-        console.warn(`Delayed data returned for ${symbol}, continuing with available data`);
-        return data.results;
-      }
-      
-      if (data.status !== 'OK') {
-        throw new Error(`Polygon API returned status: ${data.status}`);
-      }
-      
-      return data.results;
     } catch (error) {
-      console.error('Error fetching data from Polygon:', error);
+      console.error(`❌ [ERROR] Failed to fetch bars for ${symbol}:`, error);
       throw error;
     }
   }
@@ -551,37 +577,103 @@ export class PolygonService {
     }
     
     const years = this.getYearRange(startDate, endDate);
-    console.log(`📆 [YEAR RANGE] Processing years: ${years.join(', ')} (${years.length} total)`);
-    
-    let processedYears = 0;
-    
-    for (const year of years) {
-      const yearStart = new Date(Math.max(startDate.getTime(), new Date(year, 0, 1).getTime()));
-      const yearEnd = new Date(Math.min(endDate.getTime(), new Date(year, 11, 31).getTime()));
+    // For minute data with unlimited plan, download month by month for better coverage
+    if (timeframe === '1M' && (endDate.getTime() - startDate.getTime()) > 90 * 24 * 60 * 60 * 1000) {
+      console.log(`📅 [MONTHLY STRATEGY] Large minute data request - using monthly chunks for unlimited plan`);
       
-      if (progressCallback) {
-        const progress = (processedYears / years.length) * 100;
-        progressCallback(progress, year);
+      const months = [];
+      let current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const end = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0);
+      
+      while (current <= end) {
+        months.push(new Date(current));
+        current.setMonth(current.getMonth() + 1);
       }
       
-      try {
-        const from = yearStart.toISOString().split('T')[0];
-        const to = yearEnd.toISOString().split('T')[0];
+      console.log(`📆 [MONTHLY RANGE] Processing ${months.length} months for comprehensive coverage`);
+      
+      let processedMonths = 0;
+      let totalRecords = 0;
+      
+      for (const monthStart of months) {
+        const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+        const actualEnd = new Date(Math.min(monthEnd.getTime(), endDate.getTime()));
         
-        const data = await this.fetchBars(symbol, timespan, multiplier, from, to);
-        
-        if (data.length > 0) {
-          console.log(`💾 [SAVE] Saving ${data.length} data points for ${symbol} ${timeframe} (${year})`);
-          await this.saveIntelligentData(symbol, data, timeframe);
-          console.log(`✅ [COMPLETE] Successfully saved ${data.length} ${timeframe} data points for ${symbol} (${year})`);
-        } else {
-          console.log(`⚠️ [NO DATA] No data returned for ${symbol} ${timeframe} (${year})`);
+        if (progressCallback) {
+          const progress = (processedMonths / months.length) * 100;
+          const monthName = monthStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          progressCallback(progress, monthName);
         }
-      } catch (error: any) {
-        console.error(`Failed to download ${year} data for ${symbol}:`, error);
+        
+        try {
+          const from = monthStart.toISOString().split('T')[0];
+          const to = actualEnd.toISOString().split('T')[0];
+          
+          console.log(`📅 [MONTHLY FETCH] ${monthStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}: ${from} to ${to}`);
+          const data = await this.fetchBars(symbol, timespan, multiplier, from, to);
+          
+          if (data.length > 0) {
+            console.log(`💾 [MONTHLY SAVE] Saving ${data.length} data points for ${monthStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`);
+            await this.saveIntelligentData(symbol, data, timeframe);
+            totalRecords += data.length;
+            console.log(`✅ [MONTHLY COMPLETE] Month saved - running total: ${totalRecords} records`);
+          } else {
+            console.log(`⚠️ [NO MONTHLY DATA] No data for ${monthStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`);
+          }
+        } catch (error: any) {
+          console.error(`Failed to download month ${monthStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}:`, error);
+        }
+        
+        processedMonths++;
+        
+        // Small delay between months to be respectful
+        if (processedMonths < months.length) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
       }
       
-      processedYears++;
+      console.log(`🎉 [MONTHLY COMPLETE] Total records downloaded: ${totalRecords} across ${months.length} months`);
+      
+    } else {
+      // Original yearly strategy for smaller requests or non-minute data
+      console.log(`📆 [YEAR RANGE] Processing years: ${years.join(', ')} (${years.length} total)`);
+      
+      let processedYears = 0;
+      
+      for (const year of years) {
+        const yearStart = new Date(Math.max(startDate.getTime(), new Date(year, 0, 1).getTime()));
+        const yearEnd = new Date(Math.min(endDate.getTime(), new Date(year, 11, 31).getTime()));
+        
+        if (progressCallback) {
+          const progress = (processedYears / years.length) * 100;
+          progressCallback(progress, year);
+        }
+        
+        try {
+          const from = yearStart.toISOString().split('T')[0];
+          const to = yearEnd.toISOString().split('T')[0];
+          
+          console.log(`📅 [FETCH] Requesting ${symbol} ${timeframe} data for ${year}: ${from} to ${to}`);
+          const data = await this.fetchBars(symbol, timespan, multiplier, from, to);
+          
+          if (data.length > 0) {
+            console.log(`💾 [SAVE] Saving ${data.length} data points for ${symbol} ${timeframe} (${year})`);
+            await this.saveIntelligentData(symbol, data, timeframe);
+            console.log(`✅ [COMPLETE] Successfully saved ${data.length} ${timeframe} data points for ${symbol} (${year})`);
+            
+            // Log data coverage details
+            const firstRecord = new Date(data[0].t);
+            const lastRecord = new Date(data[data.length - 1].t);
+            console.log(`📊 [COVERAGE] Data spans from ${firstRecord.toISOString().split('T')[0]} to ${lastRecord.toISOString().split('T')[0]}`);
+          } else {
+            console.log(`⚠️ [NO DATA] No data returned for ${symbol} ${timeframe} (${year})`);
+          }
+        } catch (error: any) {
+          console.error(`Failed to download ${year} data for ${symbol}:`, error);
+        }
+        
+        processedYears++;
+      }
     }
     
     if (progressCallback) {
