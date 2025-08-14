@@ -35,7 +35,7 @@ export default function CandlestickChart({
       parseFloat(item.close),
       parseFloat(item.low),
       parseFloat(item.high),
-      item.volume,
+      parseFloat(item.volume.toString()),
     ]);
 
     const dates = data.map(item => new Date(item.timestamp).toLocaleDateString());
@@ -193,7 +193,7 @@ export default function CandlestickChart({
           type: 'bar',
           xAxisIndex: 1,
           yAxisIndex: 1,
-          data: data.map(item => item.volume),
+          data: data.map(item => parseFloat(item.volume.toString())),
           itemStyle: {
             color: function(params: any) {
               const dataIndex = params.dataIndex;

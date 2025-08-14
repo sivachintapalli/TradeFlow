@@ -19,6 +19,8 @@ export default function ChartPanel({ symbol, marketData, isHistorical, timeframe
 
   const showChart = historicalData && historicalData.length > 0;
 
+
+
   return (
     <div className="chart-container rounded-xl p-6 h-96" data-testid="chart-panel">
       <div className="flex items-center justify-between mb-4">
