@@ -17,12 +17,12 @@ interface HistoricalDataPoint {
   createdAt: Date | null;
 }
 
-interface SimpleHistoricalChartProps {
+interface CleanHistoricalChartProps {
   symbol?: string;
   timeframe?: string;
 }
 
-export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M" }: SimpleHistoricalChartProps) {
+export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" }: CleanHistoricalChartProps) {
   const [viewRange, setViewRange] = useState({ start: 0, end: 250 }); // Show first 250 candles by default
   const [zoomLevel, setZoomLevel] = useState(250); // Number of candles to show
   const [currentZoomStart, setCurrentZoomStart] = useState(0); // Track current zoom position
@@ -185,53 +185,6 @@ export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M"
           <div className="flex items-center space-x-1">
             <div className="w-3 h-px bg-gray-500"></div>
             <span className="text-gray-400">Day Dividers</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Data Summary */}
-      <div className="bg-navy-800 rounded-lg p-4">
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="text-sm">
-            <span className="text-gray-400">Open: </span>
-            <span className="text-white">${historicalData[0] ? parseFloat(historicalData[0].open).toFixed(2) : 'N/A'}</span>
-          </div>
-          <div className="text-sm">
-            <span className="text-gray-400">High: </span>
-            <span className="text-white">${historicalData[0] ? parseFloat(historicalData[0].high).toFixed(2) : 'N/A'}</span>
-          </div>
-          <div className="text-sm">
-            <span className="text-gray-400">Low: </span>
-            <span className="text-white">${historicalData[0] ? parseFloat(historicalData[0].low).toFixed(2) : 'N/A'}</span>
-          </div>
-          <div className="text-sm">
-            <span className="text-gray-400">Volume: </span>
-            <span className="text-white">{historicalData[0] ? historicalData[0].volume.toLocaleString() : 'N/A'}</span>
-          </div>
-        </div>
-        
-        <div className="space-y-2">
-          <h5 className="text-gray-400 text-sm font-medium">
-            Current View Data ({viewData.length} candles):
-          </h5>
-          <div className="space-y-1 max-h-32 overflow-y-auto">
-            {recentData.slice(0, 5).map((candle, index) => {
-              const candleIndex = viewRange.start + index;
-              return (
-                <div key={candle.id} className="flex justify-between text-xs">
-                  <span className="text-gray-400">#{candleIndex} {new Date(candle.timestamp).toLocaleTimeString()}</span>
-                  <span className="text-white">${parseFloat(candle.close).toFixed(2)}</span>
-                  <span className="text-gray-400">{candle.volume.toLocaleString()}</span>
-                </div>
-              );
-            })}
-          </div>
-          
-          {/* Navigation info */}
-          <div className="mt-2 pt-2 border-t border-gray-700">
-            <div className="text-xs text-gray-500">
-              <div>Pan: Use arrow buttons to navigate • Zoom: +/- buttons • Reset: Return to 100-candle view</div>
-            </div>
           </div>
         </div>
       </div>
