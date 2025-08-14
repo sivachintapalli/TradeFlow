@@ -5,6 +5,7 @@ import { insertOrderSchema, insertMarketDataSchema, insertTechnicalIndicatorsSch
 import { polygonService } from "./polygon";
 import { alpacaService } from "./alpaca";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Portfolio endpoints
@@ -61,7 +62,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/market-data/:symbol", async (req, res) => {
     try {
       const { symbol } = req.params;
-      const marketData = await storage.getMarketData(symbol.toUpperCase());
+      const upperSymbol = symbol.toUpperCase();
+      
+      // Get stored market data
+      let marketData = await storage.getMarketData(upperSymbol);
+      
+      // Try to get real-time quote to update price
+      try {
+        const realTimeQuote = await polygonService.getRealTimeQuote(upperSymbol);
+        
+        if (realTimeQuote) {
+          // Update the stored data with real-time prices
+          const updatedData = {
+            id: marketData?.id || randomUUID(),
+            symbol: upperSymbol,
+            price: realTimeQuote.price.toString(),
+            change: realTimeQuote.change.toString(),
+            changePercent: realTimeQuote.changePercent.toString(),
+            volume: marketData?.volume || 0,
+            lastUpdate: new Date()
+          };
+          
+          // Save the updated data
+          await storage.updateMarketData(updatedData);
+          marketData = updatedData;
+        }
+      } catch (realTimeError: any) {
+        console.log(`Failed to get real-time quote for ${upperSymbol}:`, realTimeError?.message || 'Unknown error');
+        // Continue with stored data if real-time fails
+      }
       
       if (!marketData) {
         res.status(404).json({ message: "Market data not found" });
@@ -70,6 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(marketData);
     } catch (error) {
+      console.error('Market data fetch error:', error);
       res.status(500).json({ message: "Failed to fetch market data" });
     }
   });

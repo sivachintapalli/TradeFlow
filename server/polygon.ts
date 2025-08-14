@@ -20,6 +20,19 @@ export interface PolygonResponse {
   next_url?: string;
 }
 
+export interface PolygonQuote {
+  symbol: string;
+  last: {
+    price: number;
+    size: number;
+    exchange: number;
+    timeframe: string;
+    timestamp: number;
+  };
+  market_status: string;
+  name: string;
+}
+
 export class PolygonService {
   private apiKey: string;
   private baseUrl = 'https://api.polygon.io';
@@ -50,6 +63,68 @@ export class PolygonService {
     const marketClose = 16 * 60; // 4:00 PM
     
     return currentMinutes >= marketOpen && currentMinutes <= marketClose;
+  }
+
+  /**
+   * Get real-time quote for a symbol
+   */
+  async getRealTimeQuote(symbol: string): Promise<{ price: number; change: number; changePercent: number } | null> {
+    try {
+      const url = `${this.baseUrl}/v1/last/stocks/${symbol}?apikey=${this.apiKey}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        console.log(`Failed to fetch real-time quote for ${symbol}: ${response.status}`);
+        return null;
+      }
+      
+      const data = await response.json();
+      
+      if (data.status === 'OK' && data.results) {
+        const currentPrice = data.results.P || data.results.price;
+        
+        // Get previous close to calculate change
+        const prevCloseUrl = `${this.baseUrl}/v1/open-close/${symbol}/${this.getPreviousBusinessDay()}?adjusted=true&apikey=${this.apiKey}`;
+        const prevCloseResponse = await fetch(prevCloseUrl);
+        
+        let change = 0;
+        let changePercent = 0;
+        
+        if (prevCloseResponse.ok) {
+          const prevCloseData = await prevCloseResponse.json();
+          if (prevCloseData.close) {
+            change = currentPrice - prevCloseData.close;
+            changePercent = (change / prevCloseData.close) * 100;
+          }
+        }
+        
+        return {
+          price: currentPrice,
+          change: parseFloat(change.toFixed(2)),
+          changePercent: parseFloat(changePercent.toFixed(2))
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`Error fetching real-time quote for ${symbol}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get previous business day in YYYY-MM-DD format
+   */
+  private getPreviousBusinessDay(): string {
+    const date = new Date();
+    date.setDate(date.getDate() - 1);
+    
+    // If it's Sunday (0) or Saturday (6), go back further
+    while (date.getDay() === 0 || date.getDay() === 6) {
+      date.setDate(date.getDate() - 1);
+    }
+    
+    return date.toISOString().split('T')[0];
   }
 
   /**
