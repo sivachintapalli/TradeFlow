@@ -46,6 +46,49 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
     }
   }, [historicalData]);
 
+  // Keyboard shortcuts for chart navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle keyboard shortcuts when chart is focused or no input is focused
+      const activeElement = document.activeElement;
+      const isInputFocused = activeElement && (
+        activeElement.tagName === 'INPUT' || 
+        activeElement.tagName === 'TEXTAREA' || 
+        activeElement.contentEditable === 'true'
+      );
+      
+      if (isInputFocused) return;
+      
+      switch (event.key) {
+        case 'ArrowLeft':
+          event.preventDefault();
+          handlePanLeft();
+          break;
+        case 'ArrowRight':
+          event.preventDefault();
+          handlePanRight();
+          break;
+        case '=':
+        case '+':
+          event.preventDefault();
+          handleZoomIn();
+          break;
+        case '-':
+          event.preventDefault();
+          handleZoomOut();
+          break;
+        case 'r':
+        case 'R':
+          event.preventDefault();
+          handleReset();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewRange, zoomLevel, allData, isLoadingMore]);
+
   // Load more historical data when needed
   const loadMoreData = useCallback(async (direction: 'older' | 'newer') => {
     if (isLoadingMore || allData.length === 0) return;
@@ -194,15 +237,65 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
         <div className="flex items-center space-x-3 text-sm text-gray-400">
           <span>Mouse: Drag to pan • Wheel to zoom</span>
           <div className="h-4 w-px bg-gray-600" />
+          <span>Keys: ← → to pan • + - to zoom • R to reset</span>
+          <div className="h-4 w-px bg-gray-600" />
           <span>Data: {allData.length.toLocaleString()} candles</span>
           {isLoadingMore && (
             <span className="text-blue-400 animate-pulse">Loading more...</span>
           )}
         </div>
-        <Button variant="outline" size="sm" onClick={handleReset} className="text-xs">
-          <RotateCcw className="h-3 w-3 mr-1" />
-          Reset View
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handlePanLeft}
+            disabled={isLoadingMore}
+            className="text-xs"
+            title="Pan Left (Go back in time)"
+          >
+            <ChevronLeft className="h-3 w-3 mr-1" />
+            Pan Left
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handlePanRight}
+            disabled={isLoadingMore}
+            className="text-xs"
+            title="Pan Right (Go forward in time)"
+          >
+            <ChevronRight className="h-3 w-3 mr-1" />
+            Pan Right
+          </Button>
+          <div className="h-4 w-px bg-gray-600" />
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleZoomIn}
+            disabled={isLoadingMore}
+            className="text-xs"
+            title="Zoom In"
+          >
+            <ZoomIn className="h-3 w-3 mr-1" />
+            Zoom In
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleZoomOut}
+            disabled={isLoadingMore}
+            className="text-xs"
+            title="Zoom Out"
+          >
+            <ZoomOut className="h-3 w-3 mr-1" />
+            Zoom Out
+          </Button>
+          <div className="h-4 w-px bg-gray-600" />
+          <Button variant="outline" size="sm" onClick={handleReset} className="text-xs">
+            <RotateCcw className="h-3 w-3 mr-1" />
+            Reset View
+          </Button>
+        </div>
       </div>
 
       {/* Actual Candlestick Chart */}
