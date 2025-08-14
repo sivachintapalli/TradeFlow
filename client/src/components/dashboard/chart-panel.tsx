@@ -1,13 +1,24 @@
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Loader2 } from "lucide-react";
+import CandlestickChart from "@/components/charts/candlestick-chart";
+import { useHistoricalData } from "@/hooks/use-trading-data";
 import type { MarketData } from "@shared/schema";
 
 interface ChartPanelProps {
   symbol: string;
   marketData?: MarketData;
   isHistorical: boolean;
+  timeframe?: string;
 }
 
-export default function ChartPanel({ symbol, marketData, isHistorical }: ChartPanelProps) {
+export default function ChartPanel({ symbol, marketData, isHistorical, timeframe = '1D' }: ChartPanelProps) {
+  const { data: historicalData, isLoading: historyLoading, error } = useHistoricalData(
+    symbol, 
+    timeframe, 
+    isHistorical ? 200 : 50
+  );
+
+  const showChart = historicalData && historicalData.length > 0;
+
   return (
     <div className="chart-container rounded-xl p-6 h-96" data-testid="chart-panel">
       <div className="flex items-center justify-between mb-4">
@@ -20,7 +31,7 @@ export default function ChartPanel({ symbol, marketData, isHistorical }: ChartPa
               className="font-mono text-2xl font-bold"
               data-testid="chart-price"
             >
-              ${marketData?.price || "0.00"}
+              ${marketData?.price || (showChart ? historicalData[historicalData.length - 1]?.close : "0.00")}
             </span>
             <span 
               className={`font-mono text-sm ${
@@ -50,17 +61,42 @@ export default function ChartPanel({ symbol, marketData, isHistorical }: ChartPa
         </div>
       </div>
       
-      {/* Chart Placeholder */}
-      <div className="bg-navy-800/50 rounded-lg h-80 flex items-center justify-center border border-white/10">
-        <div className="text-center text-gray-400">
-          <TrendingUp className={`w-16 h-16 mx-auto mb-4 ${!isHistorical ? 'text-green-bullish' : ''}`} />
-          <p className="text-lg">
-            {isHistorical ? 'Interactive Candlestick Chart' : 'Live Trading Chart'}
-          </p>
-          <p className="text-sm">
-            {isHistorical ? 'Historical price data visualization' : 'Real-time market data stream'}
-          </p>
-        </div>
+      {/* Chart Content */}
+      <div className="bg-navy-800/50 rounded-lg h-80 border border-white/10 overflow-hidden">
+        {historyLoading ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center text-gray-400">
+              <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-purple-primary" />
+              <p className="text-lg">Loading Chart Data</p>
+              <p className="text-sm">Fetching {symbol} historical data...</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center text-gray-400">
+              <TrendingUp className="w-16 h-16 mx-auto mb-4 text-red-bearish" />
+              <p className="text-lg">Chart Data Unavailable</p>
+              <p className="text-sm">Unable to load historical data for {symbol}</p>
+            </div>
+          </div>
+        ) : showChart ? (
+          <CandlestickChart 
+            data={historicalData}
+            symbol={symbol}
+            isHistorical={isHistorical}
+            className="h-full w-full"
+          />
+        ) : (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center text-gray-400">
+              <TrendingUp className={`w-16 h-16 mx-auto mb-4 ${!isHistorical ? 'text-green-bullish' : ''}`} />
+              <p className="text-lg">No Chart Data Available</p>
+              <p className="text-sm">
+                {isHistorical ? 'Load historical data to view chart' : 'Waiting for real-time data stream'}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

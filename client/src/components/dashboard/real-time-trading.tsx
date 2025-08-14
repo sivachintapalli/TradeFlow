@@ -80,6 +80,7 @@ export default function RealTimeTrading() {
               symbol={symbol}
               marketData={marketData}
               isHistorical={false}
+              timeframe={activeTimeframe}
             />
           </div>
         </div>

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertOrderSchema, insertMarketDataSchema, insertTechnicalIndicatorsSchema } from "@shared/schema";
+import { insertOrderSchema, insertMarketDataSchema, insertTechnicalIndicatorsSchema, insertHistoricalDataSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -113,6 +113,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ message: "Invalid technical indicators", errors: error.errors });
       } else {
         res.status(500).json({ message: "Failed to update technical indicators" });
+      }
+    }
+  });
+
+  // Historical data endpoints
+  app.get("/api/historical-data/:symbol", async (req, res) => {
+    try {
+      const { symbol } = req.params;
+      const { timeframe = '1D', limit = '100' } = req.query;
+      
+      const historicalData = await storage.getHistoricalData(
+        symbol.toUpperCase(), 
+        timeframe as string, 
+        parseInt(limit as string)
+      );
+      
+      res.json(historicalData);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch historical data" });
+    }
+  });
+
+  app.post("/api/historical-data", async (req, res) => {
+    try {
+      const data = insertHistoricalDataSchema.parse(req.body);
+      const result = await storage.createHistoricalData(data);
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid historical data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create historical data" });
       }
     }
   });

@@ -10,7 +10,9 @@ import {
   type Portfolio,
   type InsertPortfolio,
   type TechnicalIndicators,
-  type InsertTechnicalIndicators
+  type InsertTechnicalIndicators,
+  type HistoricalData,
+  type InsertHistoricalData
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -41,6 +43,10 @@ export interface IStorage {
   // Technical Indicators
   getTechnicalIndicators(symbol: string): Promise<TechnicalIndicators | undefined>;
   updateTechnicalIndicators(indicators: InsertTechnicalIndicators): Promise<TechnicalIndicators>;
+  
+  // Historical Data
+  getHistoricalData(symbol: string, timeframe: string, limit?: number): Promise<HistoricalData[]>;
+  createHistoricalData(data: InsertHistoricalData): Promise<HistoricalData>;
 }
 
 export class MemStorage implements IStorage {
@@ -50,6 +56,7 @@ export class MemStorage implements IStorage {
   private marketData: Map<string, MarketData>;
   private portfolio: Portfolio | undefined;
   private technicalIndicators: Map<string, TechnicalIndicators>;
+  private historicalData: Map<string, HistoricalData[]>;
 
   constructor() {
     this.users = new Map();
@@ -57,6 +64,7 @@ export class MemStorage implements IStorage {
     this.orders = new Map();
     this.marketData = new Map();
     this.technicalIndicators = new Map();
+    this.historicalData = new Map();
     
     this.initializeData();
   }
@@ -140,6 +148,41 @@ export class MemStorage implements IStorage {
     };
 
     this.technicalIndicators.set("AAPL", aaplIndicators);
+
+    // Generate sample historical data for AAPL
+    const aaplHistoricalData: HistoricalData[] = [];
+    const baseDate = new Date('2024-01-01');
+    let basePrice = 190.00;
+    
+    for (let i = 0; i < 365; i++) {
+      const date = new Date(baseDate);
+      date.setDate(baseDate.getDate() + i);
+      
+      // Generate realistic price movements
+      const priceChange = (Math.random() - 0.5) * 8; // Random change between -4 and +4
+      const open = basePrice;
+      const close = basePrice + priceChange;
+      const high = Math.max(open, close) + Math.random() * 3;
+      const low = Math.min(open, close) - Math.random() * 3;
+      const volume = Math.floor(Math.random() * 50000000) + 30000000;
+      
+      aaplHistoricalData.push({
+        id: randomUUID(),
+        symbol: "AAPL",
+        timestamp: date,
+        open: open.toFixed(2),
+        high: high.toFixed(2),
+        low: low.toFixed(2),
+        close: close.toFixed(2),
+        volume,
+        timeframe: "1D",
+        createdAt: new Date(),
+      });
+      
+      basePrice = close; // Use previous close as next base price
+    }
+    
+    this.historicalData.set("AAPL-1D", aaplHistoricalData);
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -256,11 +299,45 @@ export class MemStorage implements IStorage {
     const existing = this.technicalIndicators.get(indicators.symbol);
     const data: TechnicalIndicators = {
       id: existing?.id || randomUUID(),
-      ...indicators,
+      symbol: indicators.symbol,
+      rsi: indicators.rsi || null,
+      macd: indicators.macd || null,
+      macdSignal: indicators.macdSignal || null,
+      macdHistogram: indicators.macdHistogram || null,
+      bollingerUpper: indicators.bollingerUpper || null,
+      bollingerMiddle: indicators.bollingerMiddle || null,
+      bollingerLower: indicators.bollingerLower || null,
+      volume: indicators.volume || null,
+      avgVolume: indicators.avgVolume || null,
       updatedAt: new Date(),
     };
     this.technicalIndicators.set(indicators.symbol, data);
     return data;
+  }
+
+  async getHistoricalData(symbol: string, timeframe: string, limit = 100): Promise<HistoricalData[]> {
+    const key = `${symbol}-${timeframe}`;
+    const data = this.historicalData.get(key) || [];
+    
+    // Return the most recent data points, limited by the limit parameter
+    return data.slice(-limit).sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+  }
+
+  async createHistoricalData(data: InsertHistoricalData): Promise<HistoricalData> {
+    const historicalDataPoint: HistoricalData = {
+      id: randomUUID(),
+      ...data,
+      createdAt: new Date(),
+    };
+    
+    const key = `${data.symbol}-${data.timeframe}`;
+    const existing = this.historicalData.get(key) || [];
+    existing.push(historicalDataPoint);
+    this.historicalData.set(key, existing);
+    
+    return historicalDataPoint;
   }
 }
 

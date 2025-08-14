@@ -6,7 +6,8 @@ import type {
   Order, 
   MarketData, 
   TechnicalIndicators,
-  InsertOrder 
+  InsertOrder,
+  HistoricalData
 } from "@shared/schema";
 
 export function usePortfolio() {
@@ -54,6 +55,13 @@ export function useCreateOrder() {
       queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
     },
+  });
+}
+
+export function useHistoricalData(symbol: string, timeframe: string = '1D', limit: number = 100) {
+  return useQuery<HistoricalData[]>({
+    queryKey: ["/api/historical-data", symbol, timeframe, limit],
+    enabled: !!symbol,
   });
 }
 

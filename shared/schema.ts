@@ -67,6 +67,19 @@ export const technicalIndicators = pgTable("technical_indicators", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const historicalData = pgTable("historical_data", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  symbol: text("symbol").notNull(),
+  timestamp: timestamp("timestamp").notNull(),
+  open: decimal("open", { precision: 10, scale: 2 }).notNull(),
+  high: decimal("high", { precision: 10, scale: 2 }).notNull(),
+  low: decimal("low", { precision: 10, scale: 2 }).notNull(),
+  close: decimal("close", { precision: 10, scale: 2 }).notNull(),
+  volume: integer("volume").notNull(),
+  timeframe: text("timeframe").notNull(), // '1M', '5M', '15M', '1H', '1D'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -102,6 +115,11 @@ export const insertTechnicalIndicatorsSchema = createInsertSchema(technicalIndic
   updatedAt: true,
 });
 
+export const insertHistoricalDataSchema = createInsertSchema(historicalData).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -115,3 +133,5 @@ export type InsertPortfolio = z.infer<typeof insertPortfolioSchema>;
 export type Portfolio = typeof portfolio.$inferSelect;
 export type InsertTechnicalIndicators = z.infer<typeof insertTechnicalIndicatorsSchema>;
 export type TechnicalIndicators = typeof technicalIndicators.$inferSelect;
+export type InsertHistoricalData = z.infer<typeof insertHistoricalDataSchema>;
+export type HistoricalData = typeof historicalData.$inferSelect;

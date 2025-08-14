@@ -117,6 +117,7 @@ export default function HistoricalAnalysis() {
             symbol={symbol}
             marketData={marketData}
             isHistorical={true}
+            timeframe={activeTimeframe}
           />
         </div>
         
