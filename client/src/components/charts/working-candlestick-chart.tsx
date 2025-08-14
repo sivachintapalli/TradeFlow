@@ -334,8 +334,9 @@ export default function WorkingCandlestickChart({
           start: Math.max(0, 100 - (250 / data.length) * 100),
           end: 100,
           zoomOnMouseWheel: true,
-          moveOnMouseMove: true,
-          moveOnMouseWheel: false
+          moveOnMouseMove: false,
+          moveOnMouseWheel: true,
+          preventDefaultMouseMove: false
         },
         {
           show: true,
@@ -354,7 +355,11 @@ export default function WorkingCandlestickChart({
             color: '#94a3b8'
           }
         }
-      ]
+      ],
+      brush: {
+        toolbox: ['rect', 'polygon', 'lineX', 'lineY', 'keep', 'clear'],
+        xAxisIndex: 0
+      }
     };
 
     chartInstance.current.setOption(option);
