@@ -83,7 +83,7 @@ export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1
     queryKey: ['/api/historical-data', currentSymbol, timeframe],
     enabled: !!currentSymbol && !isDownloading && tickerStatus?.hasData,
     queryFn: async (): Promise<HistoricalDataPoint[]> => {
-      const response = await fetch(`/api/historical-data/${currentSymbol}?timeframe=${timeframe}&limit=100000`);
+      const response = await fetch(`/api/historical-data/${currentSymbol}?timeframe=${timeframe}&limit=500000`);
       if (!response.ok) throw new Error('Failed to fetch historical data');
       return response.json();
     },
@@ -283,7 +283,7 @@ export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <h3 className="text-white font-semibold text-lg">
-              {currentSymbol} - {historicalData.length.toLocaleString()} candles (Polygon API)
+              {currentSymbol} - {historicalData?.length?.toLocaleString() || '0'} candles loaded
             </h3>
             <div className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded">
               AUTHENTIC DATA
