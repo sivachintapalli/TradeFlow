@@ -23,11 +23,11 @@ interface CleanHistoricalChartProps {
 }
 
 export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" }: CleanHistoricalChartProps) {
-  const [viewRange, setViewRange] = useState({ start: 0, end: 250 }); // Show first 250 candles by default
   const [zoomLevel, setZoomLevel] = useState(250); // Number of candles to show
-  const [currentZoomStart, setCurrentZoomStart] = useState(0); // Track current zoom position
   const [allData, setAllData] = useState<HistoricalDataPoint[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // Start showing the most recent 250 candles (from the end of the data)
+  const [viewRange, setViewRange] = useState({ start: 0, end: 250 });
   
   // Fetch initial 1 year of data
   const { data: historicalData = [], isLoading } = useQuery({
@@ -35,10 +35,14 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
     enabled: !!symbol,
   });
 
-  // Update allData when initial data loads
+  // Update allData when initial data loads and set view to show most recent data
   useEffect(() => {
     if (Array.isArray(historicalData) && historicalData.length > 0) {
       setAllData(historicalData);
+      // Set view to show the most recent 250 candles
+      const dataLength = historicalData.length;
+      const startPos = Math.max(0, dataLength - 250);
+      setViewRange({ start: startPos, end: dataLength });
     }
   }, [historicalData]);
 
@@ -110,11 +114,12 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
 
   const handleReset = () => {
     setZoomLevel(250);
-    setViewRange({ start: 0, end: Math.min(250, allData.length) });
+    // Reset to show most recent 250 candles
+    const startPos = Math.max(0, allData.length - 250);
+    setViewRange({ start: startPos, end: allData.length });
   };
 
   const handleZoomChange = (startIndex: number, endIndex: number) => {
-    setCurrentZoomStart(startIndex);
     const newZoomLevel = endIndex - startIndex;
     setZoomLevel(newZoomLevel);
     setViewRange({ start: startIndex, end: endIndex });
@@ -123,35 +128,35 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
   const handlePanLeft = async () => {
     const step = Math.floor(zoomLevel * 0.3); // Move by 30% of current zoom  
     const newStart = Math.max(0, viewRange.start - step);
-    const newEnd = Math.min(newStart + zoomLevel, allData.length);
+    const newEnd = newStart + zoomLevel;
     
-    console.log(`📈 Pan Left: ${viewRange.start}-${viewRange.end} -> ${newStart}-${newEnd}`);
+    console.log(`📈 Pan Left: ${viewRange.start}-${viewRange.end} -> ${newStart}-${newEnd} (going back in time)`);
     
     // Check if we need to load more older data
     if (newStart < 100 && !isLoadingMore) {
       console.log('🔄 Loading older data during pan left');
       await loadMoreData('older');
+      return; // Let the data load, then user can pan again
     }
     
-    setViewRange({ start: newStart, end: newEnd });
-    setCurrentZoomStart(newStart);
+    setViewRange({ start: newStart, end: Math.min(newEnd, allData.length) });
   };
 
   const handlePanRight = async () => {
     const step = Math.floor(zoomLevel * 0.3); // Move by 30% of current zoom
     const newStart = Math.min(allData.length - zoomLevel, viewRange.start + step);
-    const newEnd = Math.min(newStart + zoomLevel, allData.length);
+    const newEnd = newStart + zoomLevel;
     
-    console.log(`📈 Pan Right: ${viewRange.start}-${viewRange.end} -> ${newStart}-${newEnd}`);
+    console.log(`📈 Pan Right: ${viewRange.start}-${viewRange.end} -> ${newStart}-${newEnd} (going forward in time)`);
     
     // Check if we need to load more newer data  
     if (newEnd > allData.length - 100 && !isLoadingMore) {
       console.log('🔄 Loading newer data during pan right');
       await loadMoreData('newer');
+      return; // Let the data load, then user can pan again
     }
     
-    setViewRange({ start: newStart, end: newEnd });
-    setCurrentZoomStart(newStart);
+    setViewRange({ start: newStart, end: Math.min(newEnd, allData.length) });
   };
 
   // Get data for current view - ensure we always have valid data
