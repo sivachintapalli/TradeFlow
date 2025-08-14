@@ -122,7 +122,7 @@ export default function WorkingCandlestickChart({
             { 
               xAxis: preMarketEnd,
               itemStyle: {
-                color: 'rgba(59, 130, 246, 0.1)',
+                color: 'rgba(59, 130, 246, 0.25)',
                 borderWidth: 0
               }
             }
@@ -149,7 +149,7 @@ export default function WorkingCandlestickChart({
               { 
                 xAxis: endIndex,
                 itemStyle: {
-                  color: 'rgba(147, 51, 234, 0.1)',
+                  color: 'rgba(147, 51, 234, 0.25)',
                   borderWidth: 0
                 }
               }
