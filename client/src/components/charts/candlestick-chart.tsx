@@ -187,8 +187,8 @@ export default function CandlestickChart({
     
     const option = {
       backgroundColor: 'transparent',
-      animation: true,
-      animationDuration: 1000,
+      animation: false, // Disable animation for better infinite scroll performance
+      animationDuration: 0,
       grid: [
         {
           left: '3%',

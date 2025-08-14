@@ -46,11 +46,10 @@ interface AdvancedHistoricalChartProps {
 
 export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1M" }: AdvancedHistoricalChartProps) {
   const [tickerInput, setTickerInput] = useState("");
-  const [currentSymbol, setCurrentSymbol] = useState<string | null>(symbol);
+  const [currentSymbol, setCurrentSymbol] = useState<string | null>("SPY"); // Fixed initial value
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
   const [showNewTickerUI, setShowNewTickerUI] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [crosshairData, setCrosshairData] = useState<HistoricalDataPoint | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<{
     progress: number;
@@ -60,17 +59,9 @@ export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1
     error?: boolean;
   } | null>(null);
   
+  const queryClient = useQueryClient();
   const chartRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
-  const queryClient = useQueryClient();
-
-  // Update current symbol when prop changes
-  useEffect(() => {
-    if (symbol && symbol !== currentSymbol) {
-      setCurrentSymbol(symbol);
-      setError(null);
-    }
-  }, [symbol]);
 
   // Fetch ticker status
   const { data: tickerStatus } = useQuery<TickerStatus>({
@@ -78,12 +69,28 @@ export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1
     enabled: !!currentSymbol,
   });
 
-  // Fetch ALL historical data - load complete dataset for infinite scrolling
+  // Fetch initial 1 year of data, then load more on scroll
   const { data: historicalData, isLoading: isLoadingData, refetch: refetchHistoricalData } = useQuery({
     queryKey: ['/api/historical-data', currentSymbol, timeframe],
     enabled: !!currentSymbol && !isDownloading && tickerStatus?.hasData,
     queryFn: async (): Promise<HistoricalDataPoint[]> => {
-      const response = await fetch(`/api/historical-data/${currentSymbol}?timeframe=${timeframe}&limit=500000`);
+      // Calculate 1 year limit based on timeframe
+      const getInitialLimit = (tf: string) => {
+        switch(tf) {
+          case '1M': return 365 * 24 * 60; // 1 year of 1-minute bars
+          case '5M': return 365 * 24 * 12; // 1 year of 5-minute bars
+          case '15M': return 365 * 24 * 4; // 1 year of 15-minute bars
+          case '30M': return 365 * 24 * 2; // 1 year of 30-minute bars
+          case '1H': return 365 * 24; // 1 year of 1-hour bars
+          case '1D': return 365; // 1 year of daily bars
+          default: return 50000; // Default fallback
+        }
+      };
+      
+      const limit = getInitialLimit(timeframe);
+      console.log(`[AdvancedHistoricalChart] Loading initial ${limit.toLocaleString()} bars for ${timeframe} timeframe`);
+      
+      const response = await fetch(`/api/historical-data/${currentSymbol}?timeframe=${timeframe}&limit=${limit}`);
       if (!response.ok) throw new Error('Failed to fetch historical data');
       return response.json();
     },
