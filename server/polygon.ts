@@ -506,11 +506,17 @@ export class PolygonService {
     progressCallback?: (progress: number, year?: number) => void,
     timeframe: string = '1M'
   ): Promise<void> {
+    console.log(`\n🚀 [DOWNLOAD START] Initiating download for ${symbol}`);
+    console.log(`📊 Parameters: Period=${period}, Timeframe=${timeframe}`);
+    
     const isMarketOpen = this.isMarketOpen();
     const endDate = isMarketOpen ? this.getMostRecentMarketClose() : new Date();
     
     // Calculate start date based on period
     const startDate = this.calculateStartDate(endDate, period);
+    
+    console.log(`📅 Date Range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+    console.log(`🕰️ Market Status: ${isMarketOpen ? 'OPEN' : 'CLOSED'}`);
     
     // Convert timeframe to Polygon API parameters
     const { timespan, multiplier } = this.parseTimeframe(timeframe);
@@ -521,11 +527,13 @@ export class PolygonService {
     const { jobId, isExisting } = await this.createDownloadJob(symbol, timeframe, period, startDate, endDate);
     
     if (isExisting) {
-      console.log(`Found existing download job for ${symbol} ${timeframe} ${period}, monitoring progress`);
+      console.log(`📋 [EXISTING JOB] Found existing download job for ${symbol} ${timeframe} ${period}, monitoring progress`);
       return;
     }
     
     const years = this.getYearRange(startDate, endDate);
+    console.log(`📆 [YEAR RANGE] Processing years: ${years.join(', ')} (${years.length} total)`);
+    
     let processedYears = 0;
     
     for (const year of years) {
@@ -544,8 +552,11 @@ export class PolygonService {
         const data = await this.fetchBars(symbol, timespan, multiplier, from, to);
         
         if (data.length > 0) {
+          console.log(`💾 [SAVE] Saving ${data.length} data points for ${symbol} ${timeframe} (${year})`);
           await this.saveIntelligentData(symbol, data, timeframe);
-          console.log(`Downloaded ${data.length} ${timeframe} data points for ${symbol} (${year})`);
+          console.log(`✅ [COMPLETE] Successfully saved ${data.length} ${timeframe} data points for ${symbol} (${year})`);
+        } else {
+          console.log(`⚠️ [NO DATA] No data returned for ${symbol} ${timeframe} (${year})`);
         }
       } catch (error: any) {
         console.error(`Failed to download ${year} data for ${symbol}:`, error);
@@ -576,7 +587,12 @@ export class PolygonService {
    * Intelligent data saving - only insert missing data based on timestamp+timeframe key
    */
   private async saveIntelligentData(symbol: string, candles: PolygonCandle[], timeframe: string): Promise<void> {
-    if (candles.length === 0) return;
+    if (candles.length === 0) {
+      console.log(`📭 [SAVE] No candles to save for ${symbol} ${timeframe}`);
+      return;
+    }
+    
+    console.log(`🔍 [SAVE] Processing ${candles.length} candles for ${symbol} ${timeframe}`);
     
     // Get existing timestamps for this symbol and timeframe
     const existingData = await db
