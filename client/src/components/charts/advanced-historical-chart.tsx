@@ -37,7 +37,11 @@ interface DownloadProgress {
   message?: string;
 }
 
-export default function AdvancedHistoricalChart() {
+interface AdvancedHistoricalChartProps {
+  symbol?: string;
+}
+
+export default function AdvancedHistoricalChart({ symbol = "SPY" }: AdvancedHistoricalChartProps) {
   const [tickerInput, setTickerInput] = useState("");
   const [currentSymbol, setCurrentSymbol] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");

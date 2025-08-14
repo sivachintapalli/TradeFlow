@@ -23,15 +23,9 @@ export default function RealTimeTrading() {
 
   return (
     <div className="space-y-6" data-testid="real-time-trading">
-      <div className="grid grid-cols-12 gap-6">
-        {/* Order Entry Panel */}
-        <div className="col-span-4">
-          <OrderEntryPanel />
-        </div>
-        
-        {/* Live Trading Chart */}
-        <div className="col-span-5">
-          <div className="chart-container rounded-xl p-6 h-96">
+      {/* First Row: Chart taking full width */}
+      <div className="w-full">
+        <div className="chart-container rounded-xl p-6 h-96">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-4">
                 <h3 className="text-lg font-semibold">{symbol} - Live Trading</h3>
@@ -66,7 +60,7 @@ export default function RealTimeTrading() {
                     onClick={() => setActiveTimeframe(tf)}
                     className={`px-3 py-1 rounded text-sm transition-colors ${
                       activeTimeframe === tf
-                        ? 'bg-purple-primary text-white'
+                        ? 'bg-blue-primary text-white'
                         : 'bg-navy-700 hover:bg-navy-600 text-gray-300'
                     }`}
                     data-testid={`button-live-timeframe-${tf.toLowerCase()}`}
@@ -85,10 +79,21 @@ export default function RealTimeTrading() {
             />
           </div>
         </div>
+      
+      {/* Second Row: Trading Panels */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* Order Entry Panel */}
+        <div className="col-span-4">
+          <OrderEntryPanel />
+        </div>
         
-        {/* Positions and Orders */}
-        <div className="col-span-3 space-y-6">
+        {/* Positions Panel */}
+        <div className="col-span-4">
           <PositionsPanel />
+        </div>
+        
+        {/* Orders Panel */}
+        <div className="col-span-4">
           <OrdersPanel />
         </div>
       </div>
