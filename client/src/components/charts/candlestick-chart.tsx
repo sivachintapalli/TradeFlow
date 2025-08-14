@@ -20,7 +20,7 @@ export default function CandlestickChart({
 
   useEffect(() => {
     if (!chartRef.current || !data || data.length === 0) {
-      console.log('CandlestickChart: Missing data or ref', { chartRef: !!chartRef.current, dataLength: data?.length });
+      console.log('[CandlestickChart] Missing data or ref', { chartRef: !!chartRef.current, dataLength: data?.length });
       return;
     }
 
@@ -31,7 +31,7 @@ export default function CandlestickChart({
 
     const chart = chartInstance.current;
 
-    console.log('CandlestickChart: Processing', data.length, 'data points for', symbol);
+    console.log('[CandlestickChart] Processing', data.length, 'data points for', symbol);
 
     // Process data for ECharts candlestick format: [timestamp, open, close, low, high]
     const processedData = data.map((item, index) => {
@@ -42,11 +42,14 @@ export default function CandlestickChart({
         parseFloat(item.low),
         parseFloat(item.high),
       ];
-      if (index < 3) console.log('Processing data point:', item, '-> ', result);
+      if (index < 3) console.log('[CandlestickChart] Data point', index, '-> OHLC:', [result[1], result[4], result[3], result[2]], 'Volume:', item.volume);
       return result;
     });
 
     const dates = data.map(item => new Date(item.timestamp).toLocaleDateString());
+    const volumeData = data.map(item => parseFloat(item.volume.toString()));
+
+    console.log('[CandlestickChart] Processed arrays - Candles:', processedData.length, 'Volume:', volumeData.length);
 
     const option = {
       backgroundColor: 'transparent',
@@ -203,7 +206,7 @@ export default function CandlestickChart({
           type: 'bar',
           xAxisIndex: 1,
           yAxisIndex: 1,
-          data: data.map(item => parseFloat(item.volume.toString())),
+          data: volumeData,
           itemStyle: {
             color: function(params: any) {
               const dataIndex = params.dataIndex;
@@ -250,7 +253,13 @@ export default function CandlestickChart({
       ]
     };
 
-    chart.setOption(option, true);
+    try {
+      console.log('[CandlestickChart] Setting chart option...');
+      chart.setOption(option, true);
+      console.log('[CandlestickChart] Chart option set successfully');
+    } catch (error) {
+      console.error('[CandlestickChart] Error setting chart option:', error.message || String(error));
+    }
 
     // Handle resize
     const handleResize = () => {
