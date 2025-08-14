@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertOrderSchema, insertMarketDataSchema, insertTechnicalIndicatorsSchema, insertHistoricalDataSchema } from "@shared/schema";
+import { polygonService } from "./polygon";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -147,6 +148,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ message: "Failed to create historical data" });
       }
+    }
+  });
+
+  // Polygon API endpoints for data synchronization
+  app.post("/api/sync-ticker/:symbol", async (req, res) => {
+    try {
+      const { symbol } = req.params;
+      const upperSymbol = symbol.toUpperCase();
+      
+      // Check if sync is needed
+      const needsSync = await polygonService.needsDataSync(upperSymbol);
+      if (!needsSync) {
+        return res.json({ message: "Data is up to date", synced: false });
+      }
+      
+      // Perform sync
+      await polygonService.syncTickerData(upperSymbol);
+      await polygonService.updateMarketData(upperSymbol);
+      
+      res.json({ message: "Data synchronized", synced: true });
+    } catch (error: any) {
+      console.error('Sync ticker error:', error);
+      res.status(500).json({ 
+        message: error.message || "Failed to sync ticker data",
+        error: error.name 
+      });
+    }
+  });
+
+  app.post("/api/download-ticker", async (req, res) => {
+    try {
+      const { symbol, period } = req.body;
+      
+      if (!symbol || !period) {
+        return res.status(400).json({ message: "Symbol and period are required" });
+      }
+      
+      const upperSymbol = symbol.toUpperCase();
+      const validPeriods = ['1Y', '5Y', '10Y', 'MAX'];
+      
+      if (!validPeriods.includes(period)) {
+        return res.status(400).json({ message: "Invalid period. Use 1Y, 5Y, 10Y, or MAX" });
+      }
+      
+      // Set up SSE for progress updates
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
+      });
+      
+      let progress = 0;
+      const sendProgress = (prog: number, year?: number) => {
+        progress = prog;
+        const data = JSON.stringify({ progress: Math.round(prog), year });
+        res.write(`data: ${data}\n\n`);
+      };
+      
+      try {
+        await polygonService.downloadHistoricalData(upperSymbol, period, sendProgress);
+        await polygonService.updateMarketData(upperSymbol);
+        
+        res.write(`data: ${JSON.stringify({ progress: 100, completed: true })}\n\n`);
+        res.end();
+      } catch (error: any) {
+        const errorData = JSON.stringify({ 
+          error: true, 
+          message: error.message || "Download failed",
+          progress 
+        });
+        res.write(`data: ${errorData}\n\n`);
+        res.end();
+      }
+    } catch (error: any) {
+      console.error('Download ticker error:', error);
+      res.status(500).json({ 
+        message: error.message || "Failed to download ticker data" 
+      });
+    }
+  });
+
+  app.get("/api/ticker-status/:symbol", async (req, res) => {
+    try {
+      const { symbol } = req.params;
+      const upperSymbol = symbol.toUpperCase();
+      
+      const latestTimestamp = await polygonService.getLatestDataTimestamp(upperSymbol);
+      const needsSync = await polygonService.needsDataSync(upperSymbol);
+      const isMarketOpen = polygonService.isMarketOpen();
+      const mostRecentClose = polygonService.getMostRecentMarketClose();
+      
+      res.json({
+        symbol: upperSymbol,
+        hasData: !!latestTimestamp,
+        latestTimestamp,
+        needsSync,
+        isMarketOpen,
+        mostRecentClose
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get ticker status" });
     }
   });
 
