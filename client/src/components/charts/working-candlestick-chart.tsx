@@ -210,13 +210,13 @@ export default function WorkingCandlestickChart({
       grid: [
         {
           left: '3%',
-          right: '3%',
+          right: '15%',
           top: '10%',
           height: '65%'
         },
         {
           left: '3%',
-          right: '3%',
+          right: '15%',
           top: '80%',
           height: '15%'
         }
@@ -252,6 +252,7 @@ export default function WorkingCandlestickChart({
       yAxis: [
         {
           scale: true,
+          position: 'right',
           axisLine: {
             lineStyle: {
               color: '#64748b'
@@ -259,7 +260,8 @@ export default function WorkingCandlestickChart({
           },
           axisLabel: {
             color: '#94a3b8',
-            formatter: '${value}'
+            formatter: '${value}',
+            fontSize: 11
           },
           splitLine: {
             lineStyle: {
@@ -270,6 +272,7 @@ export default function WorkingCandlestickChart({
         },
         {
           scale: true,
+          position: 'right',
           gridIndex: 1,
           axisLine: {
             lineStyle: {
@@ -277,7 +280,8 @@ export default function WorkingCandlestickChart({
             }
           },
           axisLabel: {
-            color: '#94a3b8'
+            color: '#94a3b8',
+            fontSize: 10
           },
           splitLine: {
             show: false
@@ -328,7 +332,10 @@ export default function WorkingCandlestickChart({
           type: 'inside',
           xAxisIndex: [0, 1],
           start: Math.max(0, 100 - (100 / data.length) * 100),
-          end: 100
+          end: 100,
+          zoomOnMouseWheel: true,
+          moveOnMouseMove: true,
+          moveOnMouseWheel: false
         },
         {
           show: true,
