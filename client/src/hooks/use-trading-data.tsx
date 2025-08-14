@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { 
   Portfolio, 
@@ -62,6 +62,24 @@ export function useHistoricalData(symbol: string, timeframe: string = '1M', limi
   return useQuery<HistoricalData[]>({
     queryKey: [`/api/historical-data/${symbol}?timeframe=${timeframe}&limit=${limit}`],
     enabled: !!symbol,
+    staleTime: 30000, // 30 seconds
+  });
+}
+
+export function useInfiniteHistoricalData(symbol: string, timeframe: string = '1M') {
+  return useInfiniteQuery<HistoricalData[], Error>({
+    queryKey: [`/api/historical-data/${symbol}`, timeframe, 'infinite'],
+    queryFn: async ({ pageParam = 0 }) => {
+      const response = await fetch(`/api/historical-data/${symbol}?timeframe=${timeframe}&limit=100&offset=${pageParam}`);
+      if (!response.ok) throw new Error('Failed to fetch data');
+      return response.json();
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length === 100 ? allPages.length * 100 : undefined;
+    },
+    initialPageParam: 0,
+    enabled: !!symbol,
+    staleTime: 30000,
   });
 }
 

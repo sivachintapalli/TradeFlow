@@ -121,12 +121,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/historical-data/:symbol", async (req, res) => {
     try {
       const { symbol } = req.params;
-      const { timeframe = '1D', limit = '100' } = req.query;
+      const { timeframe = '1D', limit = '100', offset = '0' } = req.query;
       
       const historicalData = await storage.getHistoricalData(
         symbol.toUpperCase(), 
         timeframe as string, 
-        parseInt(limit as string)
+        parseInt(limit as string),
+        parseInt(offset as string)
       );
       
       res.json(historicalData);

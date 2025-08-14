@@ -350,14 +350,20 @@ export class MemStorage implements IStorage {
     return data;
   }
 
-  async getHistoricalData(symbol: string, timeframe: string, limit = 100): Promise<HistoricalData[]> {
+  async getHistoricalData(symbol: string, timeframe: string, limit = 100, offset = 0): Promise<HistoricalData[]> {
     const key = `${symbol}-${timeframe}`;
     const data = this.historicalData.get(key) || [];
     
-    // Return the most recent data points, limited by the limit parameter
-    return data.slice(-limit).sort((a, b) => 
+    // Sort data by timestamp first
+    const sortedData = data.sort((a, b) => 
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
+    
+    // Apply offset and limit for pagination
+    const startIndex = Math.max(0, sortedData.length - limit - offset);
+    const endIndex = sortedData.length - offset;
+    
+    return sortedData.slice(startIndex, endIndex);
   }
 
   async createHistoricalData(data: InsertHistoricalData): Promise<HistoricalData> {

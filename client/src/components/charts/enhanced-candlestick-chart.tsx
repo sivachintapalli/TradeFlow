@@ -1,25 +1,43 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import * as echarts from "echarts";
 import type { HistoricalData } from "@shared/schema";
+import { useInfiniteHistoricalData } from "@/hooks/use-trading-data";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
-interface CandlestickChartProps {
-  data: HistoricalData[];
+interface EnhancedCandlestickChartProps {
   symbol: string;
+  timeframe: string;
   isHistorical?: boolean;
   className?: string;
 }
 
-export default function CandlestickChart({ 
-  data, 
+export default function EnhancedCandlestickChart({ 
   symbol, 
+  timeframe,
   isHistorical = true, 
   className = "" 
-}: CandlestickChartProps) {
+}: EnhancedCandlestickChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
+  const [showLoadMore, setShowLoadMore] = useState(true);
+
+  const {
+    data: infiniteData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    error
+  } = useInfiniteHistoricalData(symbol, timeframe);
+
+  // Flatten all pages of data
+  const allData = useMemo(() => {
+    return infiniteData?.pages.flat() || [];
+  }, [infiniteData]);
 
   useEffect(() => {
-    if (!chartRef.current || !data || data.length === 0) return;
+    if (!chartRef.current || !allData || allData.length === 0) return;
 
     // Initialize chart if not exists
     if (!chartInstance.current) {
@@ -29,7 +47,7 @@ export default function CandlestickChart({
     const chart = chartInstance.current;
 
     // Process data for ECharts candlestick format: [timestamp, open, close, low, high]
-    const processedData = data.map((item) => [
+    const processedData = allData.map((item) => [
       new Date(item.timestamp).getTime(),
       parseFloat(item.open),
       parseFloat(item.close),
@@ -37,12 +55,12 @@ export default function CandlestickChart({
       parseFloat(item.high),
     ]);
 
-    const dates = data.map(item => new Date(item.timestamp).toLocaleDateString());
+    const dates = allData.map(item => new Date(item.timestamp).toLocaleString());
 
     const option = {
       backgroundColor: 'transparent',
       animation: true,
-      animationDuration: 1000,
+      animationDuration: 300,
       grid: [
         {
           left: '3%',
@@ -74,8 +92,8 @@ export default function CandlestickChart({
           
           const [timestamp, open, close, low, high] = seriesData;
           const dataIndex = params[0]?.dataIndex;
-          const volume = dataIndex !== undefined && data[dataIndex] ? parseFloat(data[dataIndex].volume.toString()) : 0;
-          const date = new Date(timestamp).toLocaleDateString();
+          const volume = dataIndex !== undefined && allData[dataIndex] ? parseFloat(allData[dataIndex].volume.toString()) : 0;
+          const date = new Date(timestamp).toLocaleString();
           const change = ((close - open) / open * 100).toFixed(2);
           const changeColor = parseFloat(change) >= 0 ? '#38ce3c' : '#ef4444';
           
@@ -107,6 +125,7 @@ export default function CandlestickChart({
             color: '#94a3b8',
             fontFamily: 'Inter, sans-serif',
             fontSize: 11,
+            rotate: 45,
           },
           splitLine: { 
             show: false 
@@ -194,12 +213,12 @@ export default function CandlestickChart({
           type: 'bar',
           xAxisIndex: 1,
           yAxisIndex: 1,
-          data: data.map(item => parseFloat(item.volume.toString())),
+          data: allData.map(item => parseFloat(item.volume.toString())),
           itemStyle: {
             color: function(params: any) {
               const dataIndex = params.dataIndex;
-              if (dataIndex >= data.length) return '#475569';
-              const item = data[dataIndex];
+              if (dataIndex >= allData.length) return '#475569';
+              const item = allData[dataIndex];
               const open = parseFloat(item.open);
               const close = parseFloat(item.close);
               return close >= open ? 'rgba(56, 206, 60, 0.3)' : 'rgba(239, 68, 68, 0.3)';
@@ -253,24 +272,56 @@ export default function CandlestickChart({
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [data, symbol, isHistorical]);
+  }, [allData, symbol, isHistorical]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (chartInstance.current) {
-        chartInstance.current.dispose();
-        chartInstance.current = null;
-      }
-    };
-  }, []);
+  if (isLoading) {
+    return (
+      <div className={`flex items-center justify-center h-96 ${className}`} data-testid="chart-loading">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-primary" />
+        <span className="ml-2">Loading chart data...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`flex items-center justify-center h-96 ${className}`} data-testid="chart-error">
+        <div className="text-center">
+          <p className="text-red-400 mb-2">Chart Data Unavailable</p>
+          <p className="text-sm text-gray-400">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div 
-      ref={chartRef} 
-      className={`w-full h-full ${className}`}
-      data-testid="candlestick-chart"
-      style={{ minHeight: '300px' }}
-    />
+    <div className={`space-y-4 ${className}`}>
+      <div ref={chartRef} className="h-96 w-full" data-testid="enhanced-candlestick-chart" />
+      
+      {hasNextPage && isHistorical && (
+        <div className="flex justify-center">
+          <Button
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="bg-purple-primary hover:bg-purple-secondary px-6 py-2"
+            data-testid="button-load-more-data"
+          >
+            {isFetchingNextPage ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Loading More...
+              </>
+            ) : (
+              'Load More Data'
+            )}
+          </Button>
+        </div>
+      )}
+      
+      <div className="text-center text-sm text-gray-400">
+        Showing {allData.length} data points
+        {hasNextPage && ' • Click "Load More Data" to see historical data'}
+      </div>
+    </div>
   );
 }
