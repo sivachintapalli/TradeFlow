@@ -58,7 +58,7 @@ export function useCreateOrder() {
   });
 }
 
-export function useHistoricalData(symbol: string, timeframe: string = '1D', limit: number = 100) {
+export function useHistoricalData(symbol: string, timeframe: string = '1M', limit: number = 100) {
   return useQuery<HistoricalData[]>({
     queryKey: [`/api/historical-data/${symbol}?timeframe=${timeframe}&limit=${limit}`],
     enabled: !!symbol,

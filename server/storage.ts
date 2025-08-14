@@ -183,6 +183,41 @@ export class MemStorage implements IStorage {
     }
     
     this.historicalData.set("AAPL-1D", aaplHistoricalData);
+
+    // Generate 1-minute data for recent trading (last 2 days worth of minutes)
+    const aaplMinuteData: HistoricalData[] = [];
+    const recentDate = new Date();
+    recentDate.setDate(recentDate.getDate() - 2); // Start 2 days ago
+    let minutePrice = 196.89; // Current price as base
+    
+    for (let i = 0; i < 2880; i++) { // 2 days * 24 hours * 60 minutes
+      const date = new Date(recentDate.getTime() + i * 60000); // Add minutes
+      
+      // Generate realistic minute-level price movements
+      const priceChange = (Math.random() - 0.5) * 0.5; // Smaller changes for 1-minute data
+      const open = minutePrice;
+      const close = minutePrice + priceChange;
+      const high = Math.max(open, close) + Math.random() * 0.2;
+      const low = Math.min(open, close) - Math.random() * 0.2;
+      const volume = Math.floor(Math.random() * 1000000) + 100000;
+      
+      aaplMinuteData.push({
+        id: randomUUID(),
+        symbol: "AAPL",
+        timestamp: date,
+        open: open.toFixed(2),
+        high: high.toFixed(2),
+        low: low.toFixed(2),
+        close: close.toFixed(2),
+        volume,
+        timeframe: "1M",
+        createdAt: new Date(),
+      });
+      
+      minutePrice = close; // Use previous close as next base price
+    }
+    
+    this.historicalData.set("AAPL-1M", aaplMinuteData);
   }
 
   async getUser(id: string): Promise<User | undefined> {

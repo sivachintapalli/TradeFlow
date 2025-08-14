@@ -18,7 +18,7 @@ const periods = [
 export default function HistoricalAnalysis() {
   const [symbol, setSymbol] = useState("AAPL");
   const [period, setPeriod] = useState("2Y");
-  const [activeTimeframe, setActiveTimeframe] = useState("1D");
+  const [activeTimeframe, setActiveTimeframe] = useState("1M");
   const [isLoading, setIsLoading] = useState(false);
 
   const { data: marketData } = useMarketData(symbol);

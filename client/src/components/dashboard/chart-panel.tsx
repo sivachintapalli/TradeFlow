@@ -10,7 +10,7 @@ interface ChartPanelProps {
   timeframe?: string;
 }
 
-export default function ChartPanel({ symbol, marketData, isHistorical, timeframe = '1D' }: ChartPanelProps) {
+export default function ChartPanel({ symbol, marketData, isHistorical, timeframe = '1M' }: ChartPanelProps) {
   const { data: historicalData, isLoading: historyLoading, error } = useHistoricalData(
     symbol, 
     timeframe, 
