@@ -19,6 +19,7 @@ interface HistoricalDataPoint {
   close: string;
   volume: number;
   timeframe: string;
+  createdAt: Date | null;
 }
 
 interface TickerStatus {
@@ -40,9 +41,10 @@ interface DownloadProgress {
 
 interface AdvancedHistoricalChartProps {
   symbol?: string;
+  timeframe?: string;
 }
 
-export default function AdvancedHistoricalChart({ symbol = "SPY" }: AdvancedHistoricalChartProps) {
+export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1M" }: AdvancedHistoricalChartProps) {
   const [tickerInput, setTickerInput] = useState("");
   const [currentSymbol, setCurrentSymbol] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
@@ -53,6 +55,7 @@ export default function AdvancedHistoricalChart({ symbol = "SPY" }: AdvancedHist
   const [downloadProgress, setDownloadProgress] = useState<{
     progress: number;
     message?: string;
+    year?: number;
     completed?: boolean;
     error?: boolean;
   } | null>(null);
@@ -72,7 +75,7 @@ export default function AdvancedHistoricalChart({ symbol = "SPY" }: AdvancedHist
     queryKey: ['/api/historical-data', currentSymbol],
     enabled: !!currentSymbol && !isDownloading && tickerStatus?.hasData,
     queryFn: async (): Promise<HistoricalDataPoint[]> => {
-      const response = await fetch(`/api/historical-data/${currentSymbol}?timeframe=1M&limit=500`);
+      const response = await fetch(`/api/historical-data/${currentSymbol}?timeframe=${timeframe}&limit=500`);
       if (!response.ok) throw new Error('Failed to fetch historical data');
       return response.json();
     },

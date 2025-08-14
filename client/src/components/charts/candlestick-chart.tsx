@@ -98,8 +98,10 @@ export default function CandlestickChart({
           fontFamily: 'Roboto Mono, monospace',
         },
         formatter: function(params: any) {
-          const seriesData = params[0]?.data || [];
-          if (seriesData.length < 5) return '';
+          if (!params || !Array.isArray(params) || params.length === 0) return '';
+          
+          const seriesData = params[0]?.data;
+          if (!seriesData || !Array.isArray(seriesData) || seriesData.length < 5) return '';
           
           const [timestamp, open, close, low, high] = seriesData;
           const dataIndex = params[0]?.dataIndex;
@@ -245,6 +247,10 @@ export default function CandlestickChart({
           xAxisIndex: [0, 1],
           start: isHistorical ? 70 : 90,
           end: 100,
+          zoomLock: false,
+          moveOnMouseMove: true,
+          moveOnMouseWheel: true,
+          preventDefaultMouseMove: false,
         },
         {
           show: isHistorical,
@@ -277,7 +283,7 @@ export default function CandlestickChart({
       console.log('[CandlestickChart] Setting chart option...');
       chart.setOption(option, true);
       console.log('[CandlestickChart] Chart option set successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('[CandlestickChart] Error setting chart option:', error.message || String(error));
     }
 

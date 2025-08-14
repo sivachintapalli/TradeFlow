@@ -303,81 +303,7 @@ export class PolygonService {
     };
   }
 
-  /**
-   * Download and store historical data for a new ticker
-   */
-  async downloadHistoricalData(
-    symbol: string,
-    period: '1Y' | '5Y' | '10Y' | 'MAX',
-    onProgress?: (progress: number, year?: number) => void
-  ): Promise<void> {
-    // Use current date (2025)
-    const now = new Date('2025-08-14T12:00:00Z');
-    let startDate: Date;
-    
-    switch (period) {
-      case '1Y':
-        startDate = new Date(2024, 7, 14); // August 14, 2024 (1 year ago)
-        break;
-      case '5Y':
-        startDate = new Date(2020, 7, 14); // August 14, 2020 (5 years ago)
-        break;
-      case '10Y':
-        startDate = new Date(2015, 7, 14); // August 14, 2015 (10 years ago)
-        break;
-      case 'MAX':
-        startDate = new Date(2010, 0, 1); // Start from 2010
-        break;
-    }
-    
-    console.log(`Downloading ${symbol} data from ${startDate.toISOString()} to ${now.toISOString()}`);
-    
-    const endDate = this.getMostRecentMarketClose();
-    
-    console.log(`Downloading ${symbol} from ${startDate.toISOString()} to ${endDate.toISOString()}`);
-    
-    // Download data year by year for better progress tracking and API limits
-    const startYear = startDate.getFullYear();
-    const endYear = endDate.getFullYear();
-    const totalYears = endYear - startYear + 1;
-    
-    for (let year = startYear; year <= endYear; year++) {
-      const yearStart = new Date(Math.max(startDate.getTime(), new Date(year, 0, 1).getTime()));
-      const yearEnd = new Date(Math.min(endDate.getTime(), new Date(year, 11, 31).getTime()));
-      
-      const fromStr = yearStart.toISOString().split('T')[0];
-      const toStr = yearEnd.toISOString().split('T')[0];
-      
-      try {
-        // Download 1-minute data
-        const candles = await this.fetchBars(symbol, 'minute', 1, fromStr, toStr);
-        
-        if (candles.length > 0) {
-          const formattedData = candles.map(candle => 
-            this.formatCandleForDB(candle, symbol, '1M')
-          );
-          
-          // Insert data in chunks to avoid memory issues
-          const chunkSize = 1000;
-          for (let i = 0; i < formattedData.length; i += chunkSize) {
-            const chunk = formattedData.slice(i, i + chunkSize);
-            await db.insert(historicalData).values(chunk).onConflictDoNothing();
-          }
-        }
-        
-        // Update progress
-        const progress = ((year - startYear + 1) / totalYears) * 100;
-        onProgress?.(progress, year);
-        
-        // Rate limiting - wait 100ms between requests
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-      } catch (error) {
-        console.error(`Error downloading data for ${symbol} year ${year}:`, error);
-        throw error;
-      }
-    }
-  }
+
 
   /**
    * Update current market data for a symbol
@@ -414,6 +340,176 @@ export class PolygonService {
       console.error(`Error updating market data for ${symbol}:`, error);
       throw error;
     }
+  }
+  /**
+   * Enhanced download historical data with timeframe support and market-aware date calculations
+   */
+  async downloadHistoricalData(
+    symbol: string, 
+    period: string, 
+    progressCallback?: (progress: number, year?: number) => void,
+    timeframe: string = '1M'
+  ): Promise<void> {
+    const isMarketOpen = this.isMarketOpen();
+    const endDate = isMarketOpen ? this.getMostRecentMarketClose() : new Date();
+    
+    // Calculate start date based on period
+    const startDate = this.calculateStartDate(endDate, period);
+    
+    // Convert timeframe to Polygon API parameters
+    const { timespan, multiplier } = this.parseTimeframe(timeframe);
+    
+    console.log(`Downloading ${period} of ${timeframe} data for ${symbol} from ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+    
+    const years = this.getYearRange(startDate, endDate);
+    let processedYears = 0;
+    
+    for (const year of years) {
+      const yearStart = new Date(Math.max(startDate.getTime(), new Date(year, 0, 1).getTime()));
+      const yearEnd = new Date(Math.min(endDate.getTime(), new Date(year, 11, 31).getTime()));
+      
+      if (progressCallback) {
+        const progress = (processedYears / years.length) * 100;
+        progressCallback(progress, year);
+      }
+      
+      try {
+        const from = yearStart.toISOString().split('T')[0];
+        const to = yearEnd.toISOString().split('T')[0];
+        
+        const data = await this.fetchBars(symbol, timespan, multiplier, from, to);
+        
+        if (data.length > 0) {
+          await this.saveIntelligentData(symbol, data, timeframe);
+          console.log(`Downloaded ${data.length} ${timeframe} data points for ${symbol} (${year})`);
+        }
+      } catch (error: any) {
+        console.error(`Failed to download ${year} data for ${symbol}:`, error);
+      }
+      
+      processedYears++;
+    }
+    
+    if (progressCallback) {
+      progressCallback(100);
+    }
+  }
+
+  /**
+   * Intelligent data saving - only insert missing data based on timestamp+timeframe key
+   */
+  private async saveIntelligentData(symbol: string, candles: PolygonCandle[], timeframe: string): Promise<void> {
+    if (candles.length === 0) return;
+    
+    // Get existing timestamps for this symbol and timeframe
+    const existingData = await db
+      .select({ timestamp: historicalData.timestamp })
+      .from(historicalData)
+      .where(and(
+        eq(historicalData.symbol, symbol),
+        eq(historicalData.timeframe, timeframe)
+      ));
+    
+    const existingTimestamps = new Set(
+      existingData.map(row => new Date(row.timestamp).getTime())
+    );
+    
+    // Filter out existing data points
+    const newCandles = candles.filter(candle => {
+      const timestamp = new Date(candle.t).getTime();
+      return !existingTimestamps.has(timestamp);
+    });
+    
+    if (newCandles.length === 0) {
+      console.log(`No new data to insert for ${symbol} ${timeframe}`);
+      return;
+    }
+    
+    console.log(`Inserting ${newCandles.length} new data points for ${symbol} ${timeframe}`);
+    
+    const formattedData = newCandles.map(candle => 
+      this.formatCandleForDB(candle, symbol, timeframe)
+    );
+    
+    // Insert data in chunks to avoid memory issues
+    const chunkSize = 1000;
+    for (let i = 0; i < formattedData.length; i += chunkSize) {
+      const chunk = formattedData.slice(i, i + chunkSize);
+      await db.insert(historicalData).values(chunk).onConflictDoNothing();
+    }
+  }
+
+  /**
+   * Parse timeframe string to Polygon API parameters
+   */
+  private parseTimeframe(timeframe: string): { timespan: 'minute' | 'hour' | 'day', multiplier: number } {
+    const timeframeMap: Record<string, { timespan: 'minute' | 'hour' | 'day', multiplier: number }> = {
+      '1M': { timespan: 'minute', multiplier: 1 },
+      '5M': { timespan: 'minute', multiplier: 5 },
+      '15M': { timespan: 'minute', multiplier: 15 },
+      '30M': { timespan: 'minute', multiplier: 30 },
+      '1H': { timespan: 'hour', multiplier: 1 },
+      '1D': { timespan: 'day', multiplier: 1 }
+    };
+    
+    return timeframeMap[timeframe] || { timespan: 'minute', multiplier: 1 };
+  }
+
+  /**
+   * Calculate start date based on period
+   */
+  private calculateStartDate(endDate: Date, period: string): Date {
+    const startDate = new Date(endDate);
+    
+    switch (period) {
+      case '1Y':
+        startDate.setFullYear(endDate.getFullYear() - 1);
+        break;
+      case '2Y':
+        startDate.setFullYear(endDate.getFullYear() - 2);
+        break;
+      case '5Y':
+        startDate.setFullYear(endDate.getFullYear() - 5);
+        break;
+      case '10Y':
+        startDate.setFullYear(endDate.getFullYear() - 10);
+        break;
+      case 'MAX':
+        startDate.setFullYear(2010); // Go back to 2010 for max data
+        break;
+      default:
+        startDate.setFullYear(endDate.getFullYear() - 1);
+    }
+    
+    return startDate;
+  }
+
+  /**
+   * Get array of years in date range
+   */
+  private getYearRange(startDate: Date, endDate: Date): number[] {
+    const years: number[] = [];
+    const currentYear = startDate.getFullYear();
+    const endYear = endDate.getFullYear();
+    
+    for (let year = currentYear; year <= endYear; year++) {
+      years.push(year);
+    }
+    
+    return years;
+  }
+
+  /**
+   * Get download progress (mock implementation for now)
+   */
+  async getDownloadProgress(symbol: string): Promise<{ percentage: number; status: string; completed?: boolean; error?: string }> {
+    // This would typically check a cache or database for actual progress
+    // For now, return a default response
+    return {
+      percentage: 0,
+      status: 'No active download',
+      completed: true
+    };
   }
 }
 

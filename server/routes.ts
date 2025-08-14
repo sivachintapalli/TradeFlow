@@ -215,10 +215,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/download-ticker", async (req, res) => {
     try {
-      const { symbol, period } = req.body;
+      const { symbol, period, timeframe } = req.body;
       
-      if (!symbol || !period) {
-        return res.status(400).json({ message: "Symbol and period are required" });
+      if (!symbol || !period || !timeframe) {
+        return res.status(400).json({ message: "Symbol, period, and timeframe are required" });
       }
       
       const upperSymbol = symbol.toUpperCase();
@@ -245,7 +245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       try {
-        await polygonService.downloadHistoricalData(upperSymbol, period, sendProgress);
+        await polygonService.downloadHistoricalData(upperSymbol, period, sendProgress, timeframe);
         await polygonService.updateMarketData(upperSymbol);
         
         res.write(`data: ${JSON.stringify({ progress: 100, completed: true })}\n\n`);
@@ -405,6 +405,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Emergency stop error:', error);
       res.status(500).json({ message: error.message || "Failed to execute emergency stop" });
+    }
+  });
+
+  // Download progress tracking endpoint  
+  app.get("/api/download-progress/:symbol", async (req, res) => {
+    try {
+      const { symbol } = req.params;
+      const upperSymbol = symbol.toUpperCase();
+      
+      // Get progress from the polygon service
+      const progress = await polygonService.getDownloadProgress(upperSymbol);
+      res.json(progress);
+    } catch (error: any) {
+      console.error('Progress check error:', error);
+      res.status(500).json({ 
+        message: error.message || "Failed to check download progress",
+        percentage: 0,
+        status: "Error checking progress"
+      });
     }
   });
 
