@@ -5,6 +5,7 @@ A professional algorithmic trading dashboard built with React, Express, and Type
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
+Data integrity: Never use mock data - only authentic market data from real sources.
 
 # System Architecture
 
@@ -74,4 +75,8 @@ Preferred communication style: Simple, everyday language.
 
 ## Financial Data Integration
 
-- The application is structured to integrate with financial data providers for real-time market data, though specific providers are not currently implemented in the codebase.
+- **Polygon.io API**: Integrated for authentic real-time and historical market data
+- **Data Integrity Policy**: System exclusively uses real market data - no mock, placeholder, or synthetic data
+- **Historical Data**: Downloaded on-demand from Polygon API with progress tracking
+- **Market Data Sync**: Automatic synchronization of existing tickers with latest market data
+- **Error Handling**: Clear messaging when authentic data unavailable, never falls back to mock data

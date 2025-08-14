@@ -205,20 +205,24 @@ export default function AdvancedHistoricalChart() {
     };
   }, []);
 
-  // Simple candlestick rendering for now - can be enhanced with a proper charting library
+  // Render authentic data only - no mock data ever displayed
   const renderCandlestickChart = () => {
     if (!historicalData || historicalData.length === 0) {
       return (
         <div className="flex items-center justify-center h-96 text-gray-400">
           <div className="text-center">
             <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No data available. Load a ticker to view charts.</p>
+            <div className="space-y-2">
+              <p className="font-semibold">No Market Data Available</p>
+              <p className="text-sm">Enter a ticker symbol above to download real market data from Polygon API</p>
+              <p className="text-xs text-gray-500">This system only displays authentic financial data - no mock or sample data</p>
+            </div>
           </div>
         </div>
       );
     }
 
-    // For now, show a simple representation - this would be replaced with a proper charting library
+    // Display authentic market data from Polygon API
     return (
       <div className="relative h-96 bg-navy-800 rounded-lg p-4">
         <div className="absolute inset-0 pointer-events-none">
@@ -229,14 +233,22 @@ export default function AdvancedHistoricalChart() {
         </div>
         
         <div className="relative z-10">
-          <h3 className="text-white font-semibold mb-2">
-            {currentSymbol} - {historicalData.length} candles loaded
-          </h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-white font-semibold">
+              {currentSymbol} - {historicalData.length} candles (Polygon API)
+            </h3>
+            <div className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded">
+              LIVE DATA
+            </div>
+          </div>
           <div className="text-sm text-gray-400">
             Latest: {historicalData[0]?.timestamp ? new Date(historicalData[0].timestamp).toLocaleString() : 'N/A'}
           </div>
           <div className="text-sm text-gray-400 mt-2">
-            Price Range: ${Math.min(...historicalData.map(d => parseFloat(d.low)))} - ${Math.max(...historicalData.map(d => parseFloat(d.high)))}
+            Price Range: ${Math.min(...historicalData.map(d => parseFloat(d.low))).toFixed(2)} - ${Math.max(...historicalData.map(d => parseFloat(d.high))).toFixed(2)}
+          </div>
+          <div className="text-xs text-gray-500 mt-2">
+            Data Source: Polygon.io Real-Time Market Data
           </div>
           
           {/* Crosshair tooltip */}
