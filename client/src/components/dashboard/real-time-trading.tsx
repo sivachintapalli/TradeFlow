@@ -7,6 +7,13 @@ import ChartPanel from "./chart-panel";
 import { useMarketData } from "@/hooks/use-trading-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+interface AlpacaAccountData {
+  portfolio_value: string;
+  buying_power: string;
+  unrealized_pl: string;
+  status: string;
+}
+
 const timeframes = ['1M', '5M', '15M'];
 
 export default function RealTimeTrading() {
@@ -15,7 +22,7 @@ export default function RealTimeTrading() {
   const { data: marketData } = useMarketData(symbol);
   
   // Fetch account data
-  const { data: accountData, isLoading: accountLoading } = useQuery({
+  const { data: accountData, isLoading: accountLoading } = useQuery<AlpacaAccountData>({
     queryKey: ['/api/alpaca/account'],
     refetchInterval: 5000, // Refresh every 5 seconds
   });

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import WorkingCandlestickChart from "@/components/charts/working-candlestick-chart";
+import type { HistoricalData } from "@shared/schema";
 
 interface HistoricalDataPoint {
   id: string;
@@ -28,7 +29,7 @@ export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M"
   const [currentZoomStart, setCurrentZoomStart] = useState(0); // Track current zoom position
   
   // Fetch initial 1 year of data
-  const { data: historicalData = [], isLoading } = useQuery({
+  const { data: historicalData = [], isLoading } = useQuery<HistoricalData[]>({
     queryKey: [`/api/historical-data/${symbol}?timeframe=${timeframe}&limit=50000`],
     enabled: !!symbol,
   });
@@ -162,7 +163,10 @@ export default function SimpleHistoricalChart({ symbol = "SPY", timeframe = "1M"
         </div>
         
         <WorkingCandlestickChart 
-          data={viewData}
+          data={viewData.map((candle) => ({
+            ...candle,
+            timestamp: candle.timestamp instanceof Date ? candle.timestamp.toISOString() : candle.timestamp,
+          }))}
           symbol={symbol}
           height="450px"
           onZoomChange={handleZoomChange}

@@ -54,7 +54,7 @@ export default function CleanHistoricalChart({ symbol = "SPY", timeframe = "1M" 
       const isInputFocused = activeElement && (
         activeElement.tagName === 'INPUT' || 
         activeElement.tagName === 'TEXTAREA' || 
-        activeElement.contentEditable === 'true'
+        (activeElement as HTMLElement).isContentEditable
       );
       
       if (isInputFocused) return;
