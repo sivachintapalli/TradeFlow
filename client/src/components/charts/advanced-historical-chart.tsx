@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { apiRequest } from "@/lib/queryClient";
 import { Search, Download, Loader2, AlertCircle } from "lucide-react";
 import CandlestickChart from "@/components/charts/candlestick-chart";
+import type { HistoricalData } from "@shared/schema";
 
 interface HistoricalDataPoint {
   id: string;
@@ -171,7 +171,7 @@ export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1
         body: JSON.stringify({ 
           symbol: currentSymbol, 
           period: selectedPeriod,
-          timeframe: selectedTimeframe 
+          timeframe
         }),
       });
 
@@ -311,7 +311,10 @@ export default function AdvancedHistoricalChart({ symbol = "SPY", timeframe = "1
         
         {/* ECharts Candlestick Chart */}
         <CandlestickChart 
-          data={historicalData || []}
+          data={(historicalData || []).map((point): HistoricalData => ({
+            ...point,
+            timestamp: new Date(point.timestamp),
+          }))}
           symbol={currentSymbol || 'Unknown'}
           isHistorical={true}
           className="h-96 w-full bg-navy-800 rounded-lg"

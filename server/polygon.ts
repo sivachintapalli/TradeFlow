@@ -18,6 +18,7 @@ export interface PolygonResponse {
   resultsCount: number;
   count: number;
   next_url?: string;
+  error?: string;
 }
 
 export interface PolygonQuote {
@@ -546,7 +547,7 @@ export class PolygonService {
   async downloadHistoricalData(
     symbol: string, 
     period: string, 
-    progressCallback?: (progress: number, year?: number) => void,
+    progressCallback?: (progress: number, periodLabel?: number | string) => void,
     timeframe: string = '1M'
   ): Promise<void> {
     console.log(`\n🚀 [DOWNLOAD START] Initiating download for ${symbol}`);
@@ -979,25 +980,6 @@ export class PolygonService {
     }
   }
 
-  /**
-   * Get previous business day in YYYY-MM-DD format
-   */
-  private getPreviousBusinessDay(): string {
-    const today = new Date();
-    let previousDay = new Date(today);
-    
-    // Go back 1 day initially
-    previousDay.setDate(today.getDate() - 1);
-    
-    // If it's Monday, go back to Friday (3 days)
-    if (previousDay.getDay() === 0) { // Sunday
-      previousDay.setDate(previousDay.getDate() - 2);
-    } else if (previousDay.getDay() === 6) { // Saturday
-      previousDay.setDate(previousDay.getDate() - 1);
-    }
-    
-    return previousDay.toISOString().split('T')[0];
-  }
 }
 
 export const polygonService = new PolygonService();

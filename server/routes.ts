@@ -243,14 +243,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       let progress = 0;
-      const sendProgress = (prog: number, year?: number) => {
+      const sendProgress = (prog: number, periodLabel?: number | string) => {
         progress = prog;
         // Display user-friendly timeframe (1M -> 1m for minute)
         const displayTimeframe = timeframe === '1M' ? '1m' : timeframe;
         const data = JSON.stringify({ 
           progress: Math.round(prog), 
           message: `Downloading ${displayTimeframe} data...`,
-          year
+          year: periodLabel
         });
         res.write(`data: ${data}\n\n`);
       };
